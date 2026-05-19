@@ -6,6 +6,8 @@ public partial class Matricula : ContentPage
 {
     private readonly DataBaseServices _dbService;
 
+    private string selectedPdfPath = "";
+
     public ObservableCollection<MatriculaItem> Matriculas { get; set; } = new();
 
     public Matricula(DataBaseServices dbService)
@@ -46,6 +48,65 @@ public partial class Matricula : ContentPage
         }
 
         MatriculasCollectionView.ItemsSource = Matriculas;
+    }
+
+    private async void OnPickPdfClicked(object sender, EventArgs e)
+    {
+        var result = await FilePicker.Default.PickAsync(new PickOptions
+        {
+            PickerTitle = "Selecciona un PDF",
+            FileTypes = FilePickerFileType.Pdf
+        });
+
+        if (result != null)
+        {
+            selectedPdfPath = result.FullPath;
+            PdfLabel.Text = $"PDF: {result.FileName}";
+        }
+    }
+
+    private async void OnSaveSemesterClicked(object sender, EventArgs e)
+    {
+        if (!ActiveProfileService.HasActiveProfile)
+        {
+            await DisplayAlert("Error", "No hay perfil activo.", "OK");
+            return;
+        }
+
+        string semesterName = SemesterEntry.Text;
+
+        if (string.IsNullOrWhiteSpace(semesterName))
+        {
+            await DisplayAlert("Error", "Escribe el nombre del semestre", "OK");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedPdfPath))
+        {
+            await DisplayAlert("Error", "Selecciona un PDF", "OK");
+            return;
+        }
+
+        var nuevaMatricula = new MatriculaItem
+        {
+            Semestre = semesterName,
+            Year = DateTime.Now.Year.ToString(),
+            DateSaved = DateTime.Now
+        };
+
+        await _dbService.SaveMatriculaAsync(nuevaMatricula);
+
+        await DisplayAlert(
+            "Guardado",
+            $"Semestre guardado correctamente\nPDF: {selectedPdfPath}",
+            "OK"
+        );
+
+        SemesterEntry.Text = "";
+        PdfLabel.Text = "Ningún PDF seleccionado";
+        selectedPdfPath = "";
+
+        await LoadMatriculasAsync();
     }
 
     private async void OnAddMatriculaClicked(object sender, EventArgs e)

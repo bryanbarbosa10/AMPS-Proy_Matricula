@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AMPS.Matricula"
@@ -33,6 +32,7 @@
                            Margin="0,5">
 
                         <VerticalStackLayout>
+
                             <Label Text="{Binding Semestre}"
                                    FontSize="18"
                                    FontAttributes="Bold"
@@ -45,6 +45,7 @@
                             <Label Text="{Binding DateSaved, StringFormat='Guardado: {0:MM/dd/yyyy}'}"
                                    FontSize="12"
                                    HorizontalOptions="Center"/>
+
                         </VerticalStackLayout>
 
                     </Frame>
@@ -52,5 +53,30 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
+        <Entry 
+            x:Name="SemesterEntry"
+            Placeholder="Nombre del semestre"
+            BackgroundColor="White"
+            TextColor="Black"/>
+
+        <Button
+            Text="Seleccionar PDF"
+            BackgroundColor="#E0E0E0"
+            TextColor="Black"
+            Clicked="OnPickPdfClicked"/>
+
+        <Label
+            x:Name="PdfLabel"
+            Text="Ningún PDF seleccionado"
+            FontSize="14"
+            HorizontalOptions="Center"/>
+
+        <Button
+            Text="Guardar Semestre"
+            BackgroundColor="#A5D6A7"
+            TextColor="Black"
+            Clicked="OnSaveSemesterClicked"/>
+
     </VerticalStackLayout>
+
 </ContentPage>
