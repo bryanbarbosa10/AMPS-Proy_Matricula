@@ -1,15 +1,20 @@
+using System.Collections.ObjectModel;
+
 namespace AMPS;
 
 public partial class Promedio : ContentPage
 {
     private readonly DataBaseServices _dbService;
 
-    public List<Grade> MisNotas { get; set; } = new List<Grade>();
+    public ObservableCollection<Grade> MisNotas { get; set; } = new();
+
+    public ObservableCollection<GpaHistory> HistorialGpa { get; set; } = new();
 
     public Promedio(DataBaseServices dbService)
     {
         InitializeComponent();
         _dbService = dbService;
+        BindingContext = this;
     }
 
     protected override async void OnAppearing()
@@ -28,83 +33,37 @@ public partial class Promedio : ContentPage
             return;
         }
 
-        await CargarNotasAsync();
+        await CargarPromedioAsync();
     }
 
-    private async Task CargarNotasAsync()
+    private async Task CargarPromedioAsync()
     {
-        MisNotas = await _dbService.GetGradesForActiveStudentAsync();
+        MisNotas.Clear();
+        HistorialGpa.Clear();
+
+        var notas = await _dbService.GetGradesForActiveStudentAsync();
+
+        foreach (var nota in notas)
+        {
+            MisNotas.Add(nota);
+        }
+
+        var historial = await _dbService.GetGpaHistoryForActiveStudentAsync();
+
+        foreach (var item in historial)
+        {
+            HistorialGpa.Add(item);
+        }
 
         CalcularGPA();
-    }
-
-    private async void OnCalcularGPAClicked(object sender, EventArgs e)
-    {
-        if (!ActiveProfileService.HasActiveProfile)
-        {
-            await DisplayAlert("Error", "No hay perfil activo.", "OK");
-            return;
-        }
-
-        // Validate subject
-        string materia = EntMateria.Text?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(materia))
-        {
-            await DisplayAlert("Missing Data", "Debes escribir la materia.", "OK");
-            return;
-        }
-
-        // Validate credits
-        if (string.IsNullOrWhiteSpace(EntCreditos.Text))
-        {
-            await DisplayAlert("Missing Data", "Debes escribir los créditos.", "OK");
-            return;
-        }
-
-        if (!int.TryParse(EntCreditos.Text, out int creditos) || creditos <= 0)
-        {
-            await DisplayAlert("Invalid Data", "Los créditos deben ser un número mayor de 0.", "OK");
-            return;
-        }
-
-        // Validate grade
-        if (PickNota.SelectedItem == null)
-        {
-            await DisplayAlert("Missing Data", "Debes seleccionar una calificación.", "OK");
-            return;
-        }
-
-        string calificacion = PickNota.SelectedItem.ToString() ?? string.Empty;
-
-        // Create new grade
-        var nuevaNota = new Grade
-        {
-            Materia = materia,
-            Creditos = creditos,
-            Calificacion = calificacion
-        };
-
-        // Save grade to SQLite with active profile
-        await _dbService.SaveGradeAsync(nuevaNota);
-
-        // Reload grades from active profile
-        await CargarNotasAsync();
-
-        // Clear inputs
-        EntMateria.Text = string.Empty;
-        EntCreditos.Text = string.Empty;
-        PickNota.SelectedItem = null;
-
-        await DisplayAlert("AMPS", "Nota guardada correctamente.", "OK");
     }
 
     private void CalcularGPA()
     {
         if (MisNotas.Count == 0)
         {
-            LblResultadoGPA.Text = "0.00";
             LblGpaTotal.Text = "0.00";
+            LblCreditsTotal.Text = "Créditos completados: 0";
             return;
         }
 
@@ -113,14 +72,14 @@ public partial class Promedio : ContentPage
 
         if (totalCredits == 0)
         {
-            LblResultadoGPA.Text = "0.00";
             LblGpaTotal.Text = "0.00";
+            LblCreditsTotal.Text = "Créditos completados: 0";
             return;
         }
 
         double gpa = honorPoints / totalCredits;
 
-        LblResultadoGPA.Text = gpa.ToString("F2");
         LblGpaTotal.Text = gpa.ToString("F2");
+        LblCreditsTotal.Text = $"Créditos completados: {totalCredits}";
     }
 }

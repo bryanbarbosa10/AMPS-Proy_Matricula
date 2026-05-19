@@ -22,6 +22,7 @@ namespace AMPS
             _database.CreateTableAsync<Grade>().Wait();
             _database.CreateTableAsync<MatriculaItem>().Wait();
             _database.CreateTableAsync<MatriculaFile>().Wait();
+            _database.CreateTableAsync<GpaHistory>().Wait();
         }
 
 
@@ -209,7 +210,46 @@ namespace AMPS
             return deletedCount;
         }
 
+        public async Task<double> CalculateCurrentGpaForActiveStudentAsync()
+        {
+            var grades = await GetGradesForActiveStudentAsync();
 
+            if (grades.Count == 0)
+                return 0.0;
+
+            double honorPoints = grades.Sum(g => g.PuntosDeHonor * g.Creditos);
+            int totalCredits = grades.Sum(g => g.Creditos);
+
+            if (totalCredits == 0)
+                return 0.0;
+
+            return honorPoints / totalCredits;
+        }
+
+        public async Task<int> SaveGpaHistoryAsync(GpaHistory history)
+        {
+            var activeStudent = ActiveProfileService.CurrentStudent;
+
+            if (activeStudent == null)
+                throw new Exception("No hay perfil activo.");
+
+            history.StudentDbId = activeStudent.Id;
+
+            return await _database.InsertAsync(history);
+        }
+
+        public async Task<List<GpaHistory>> GetGpaHistoryForActiveStudentAsync()
+        {
+            var activeStudent = ActiveProfileService.CurrentStudent;
+
+            if (activeStudent == null)
+                return new List<GpaHistory>();
+
+            return await _database.Table<GpaHistory>()
+                .Where(h => h.StudentDbId == activeStudent.Id)
+                .OrderByDescending(h => h.DateSaved)
+                .ToListAsync();
+        }
 
         // MATRICULAS------------------------------------------
 

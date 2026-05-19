@@ -219,6 +219,8 @@ public partial class Secuencial : ContentPage
         if (string.IsNullOrWhiteSpace(resultado) || resultado == "Luego")
             return;
 
+        double previousGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+
         var nuevaNota = new Grade
         {
             Materia = curso.Nombre,
@@ -227,6 +229,21 @@ public partial class Secuencial : ContentPage
         };
 
         await _dbService.SaveGradeAsync(nuevaNota);
+
+        double newGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+
+        var history = new GpaHistory
+        {
+            PreviousGpa = previousGpa,
+            NewGpa = newGpa,
+            AddedCourseName = curso.Nombre,
+            AddedCourseCode = curso.Codigo,
+            Credits = curso.Creditos,
+            GradeLetter = resultado,
+            DateSaved = DateTime.Now
+        };
+
+        await _dbService.SaveGpaHistoryAsync(history);
     }
 
     private async void OnGuardarProgresoClicked(object sender, EventArgs e)

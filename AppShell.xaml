@@ -4,46 +4,49 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:AMPS"
+    Title="AMPS"
     FlyoutBehavior="Flyout">
 
-    <!-- Main page -->
-    <FlyoutItem Title="Dashboard">
+    <Shell.FlyoutHeader>
+        <Grid Padding="20"
+              BackgroundColor="{StaticResource AmpsBlue}">
+            <Label Text="AMPS"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="White"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <FlyoutItem Title="AMPS" Route="Dashboard">
         <ShellContent
-            Title="Dashboard"
-            ContentTemplate="{DataTemplate local:Dashboard}"
-            Route="Dashboard" />
+            Title="AMPS"
+            ContentTemplate="{DataTemplate local:Dashboard}" />
     </FlyoutItem>
 
-    <!-- Profile management -->
-    <FlyoutItem Title="Administración de Perfiles">
+    <FlyoutItem Title="Administrar perfiles" Route="ProfileManagement">
         <ShellContent
-            Title="Administración de Perfiles"
-            ContentTemplate="{DataTemplate local:ProfileManagement}"
-            Route="ProfileManagement" />
+            Title="Administrar perfiles"
+            ContentTemplate="{DataTemplate local:ProfileManagement}" />
     </FlyoutItem>
 
-    <!-- Secuencial -->
-    <FlyoutItem Title="Secuencial">
+    <FlyoutItem Title="Matrícula" Route="Matricula">
+        <ShellContent
+            Title="Matrícula"
+            ContentTemplate="{DataTemplate local:Matricula}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Promedio" Route="Promedio">
+        <ShellContent
+            Title="Promedio"
+            ContentTemplate="{DataTemplate local:Promedio}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Secuencial" Route="Secuencial">
         <ShellContent
             Title="Secuencial"
-            ContentTemplate="{DataTemplate local:Secuencial}"
-            Route="Secuencial" />
-    </FlyoutItem>
-
-    <!-- Promedio -->
-    <FlyoutItem Title="Promedio">
-        <ShellContent
-        Title="Promedio"
-        ContentTemplate="{DataTemplate local:Promedio}"
-        Route="Promedio" />
-    </FlyoutItem>
-
-    <!-- Matricula -->
-    <FlyoutItem Title="Matricula">
-        <ShellContent
-            Title="Matricula"
-            ContentTemplate="{DataTemplate local:Matricula}"
-            Route="Matricula" />
+            ContentTemplate="{DataTemplate local:Secuencial}" />
     </FlyoutItem>
 
 </Shell>
