@@ -42,6 +42,7 @@ namespace AMPS
             builder.Services.AddTransient<Promedio>();
             builder.Services.AddTransient<Secuencial>();
             builder.Services.AddTransient<ProfileManagement>();
+            builder.Services.AddTransient<SettingsPage>();
 
 #if DEBUG
             // Debug log

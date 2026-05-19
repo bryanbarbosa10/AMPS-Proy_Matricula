@@ -17,6 +17,7 @@
             Routing.RegisterRoute(nameof(Promedio), typeof(Promedio));
             Routing.RegisterRoute(nameof(Secuencial), typeof(Secuencial));
             Routing.RegisterRoute(nameof(ProfileManagement), typeof(ProfileManagement));
+            Routing.RegisterRoute(nameof(SettingsPage), typeof(SettingsPage));
 
             Loaded += async (s, e) => await CheckInitialNavigationAsync();
         }

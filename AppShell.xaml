@@ -49,4 +49,10 @@
             ContentTemplate="{DataTemplate local:Secuencial}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Settings" Route="SettingsPage">
+        <ShellContent
+        Title="Settings"
+        ContentTemplate="{DataTemplate local:SettingsPage}" />
+    </FlyoutItem>
+
 </Shell>

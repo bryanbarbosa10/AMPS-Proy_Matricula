@@ -13,13 +13,9 @@ public class GpaHistory
 
     public double NewGpa { get; set; }
 
-    public string AddedCourseName { get; set; } = string.Empty;
+    public string AddedCoursesSummary { get; set; } = string.Empty;
 
-    public string AddedCourseCode { get; set; } = string.Empty;
-
-    public int Credits { get; set; }
-
-    public string GradeLetter { get; set; } = string.Empty;
+    public int TotalCreditsAdded { get; set; }
 
     public DateTime DateSaved { get; set; }
 }

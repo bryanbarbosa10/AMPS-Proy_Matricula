@@ -203,7 +203,7 @@ public partial class Secuencial : ContentPage
         );
     }
 
-    private async Task PreguntarYGuardarNotaAsync(Course curso)
+    private async Task<string?> PreguntarYGuardarNotaAsync(Course curso)
     {
         string resultado = await DisplayActionSheet(
             $"Nota final para {curso.Nombre} ({curso.Codigo})",
@@ -217,9 +217,7 @@ public partial class Secuencial : ContentPage
         );
 
         if (string.IsNullOrWhiteSpace(resultado) || resultado == "Luego")
-            return;
-
-        double previousGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+            return null;
 
         var nuevaNota = new Grade
         {
@@ -230,20 +228,7 @@ public partial class Secuencial : ContentPage
 
         await _dbService.SaveGradeAsync(nuevaNota);
 
-        double newGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
-
-        var history = new GpaHistory
-        {
-            PreviousGpa = previousGpa,
-            NewGpa = newGpa,
-            AddedCourseName = curso.Nombre,
-            AddedCourseCode = curso.Codigo,
-            Credits = curso.Creditos,
-            GradeLetter = resultado,
-            DateSaved = DateTime.Now
-        };
-
-        await _dbService.SaveGpaHistoryAsync(history);
+        return resultado;
     }
 
     private async void OnGuardarProgresoClicked(object sender, EventArgs e)
@@ -253,6 +238,11 @@ public partial class Secuencial : ContentPage
             await DisplayAlert("Error", "No hay perfil activo.", "OK");
             return;
         }
+
+        double previousGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+
+        var addedCoursesSummary = new List<string>();
+        int totalCreditsAdded = 0;
 
         foreach (var curso in MiSecuencial)
         {
@@ -265,17 +255,39 @@ public partial class Secuencial : ContentPage
 
             await _dbService.SaveCourseAsync(curso);
 
-            // Si el curso acaba de marcarse como completado, se pregunta la nota
             if (isNewlyCompleted)
             {
-                await PreguntarYGuardarNotaAsync(curso);
+                string? nota = await PreguntarYGuardarNotaAsync(curso);
+
+                if (!string.IsNullOrWhiteSpace(nota))
+                {
+                    addedCoursesSummary.Add($"{curso.Nombre} ({curso.Codigo}) - Nota: {nota}");
+                    totalCreditsAdded += curso.Creditos;
+                }
             }
 
-            // Si el curso estaba completado y ahora se desmarcó, se elimina del promedio
             if (wasUnchecked)
             {
                 await _dbService.DeleteGradeForCourseAsync(curso);
+                // Si usas historial agrupado, no borraremos tarjetas viejas automáticamente.
+                // El historial representa cambios pasados, no el estado actual.
             }
+        }
+
+        if (addedCoursesSummary.Count > 0)
+        {
+            double newGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+
+            var history = new GpaHistory
+            {
+                PreviousGpa = previousGpa,
+                NewGpa = newGpa,
+                AddedCoursesSummary = string.Join("\n", addedCoursesSummary),
+                TotalCreditsAdded = totalCreditsAdded,
+                DateSaved = DateTime.Now
+            };
+
+            await _dbService.SaveGpaHistoryAsync(history);
         }
 
         await CargarDatos();

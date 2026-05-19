@@ -7,6 +7,14 @@
         public App(DataBaseServices dbService)
         {
             InitializeComponent();
+            string savedTheme = Preferences.Get("AppTheme", "Sistema");
+
+            UserAppTheme = savedTheme switch
+            {
+                "Light" => AppTheme.Light,
+                "Dark" => AppTheme.Dark,
+                _ => AppTheme.Unspecified
+            };
             _dbService = dbService;
         }
 

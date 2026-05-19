@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AMPS.SettingsPage"
+             Title="Settings">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+
+            <Label Text="AMPS Settings"
+                   FontSize="26"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource AmpsBlue}"
+                   HorizontalOptions="Center" />
+
+            <Frame Padding="15"
+                   CornerRadius="12"
+                   HasShadow="False"
+                   BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Tema de la aplicación"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource AmpsBlue}" />
+
+                    <Picker x:Name="ThemePicker"
+                            Title="Selecciona tema"
+                            SelectedIndexChanged="OnThemeChanged">
+                        <Picker.Items>
+                            <x:String>Sistema</x:String>
+                            <x:String>Light</x:String>
+                            <x:String>Dark</x:String>
+                        </Picker.Items>
+                    </Picker>
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="15"
+                   CornerRadius="12"
+                   HasShadow="False"
+                   BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                <VerticalStackLayout Spacing="12">
+
+                    <Label Text="Zona de reinicio"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="#EF5350" />
+
+                    <Label Text="Estas acciones borran datos del perfil activo. Úsalas solo si estás seguro."
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                    <Button Text="Reiniciar Secuencial"
+                            Clicked="OnResetSecuencialClicked"
+                            BackgroundColor="#EF5350"
+                            TextColor="White"
+                            CornerRadius="10" />
+
+                    <Button Text="Reiniciar Matrícula"
+                            Clicked="OnResetMatriculaClicked"
+                            BackgroundColor="#EF5350"
+                            TextColor="White"
+                            CornerRadius="10" />
+
+                    <Button Text="Reiniciar Promedio"
+                            Clicked="OnResetPromedioClicked"
+                            BackgroundColor="#EF5350"
+                            TextColor="White"
+                            CornerRadius="10" />
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame x:Name="ToastFrame"
+                   IsVisible="False"
+                   BackgroundColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+                   CornerRadius="20"
+                   Padding="15,10"
+                   HorizontalOptions="Center"
+                   HasShadow="True">
+
+                <Label x:Name="ToastLabel"
+                       Text=""
+                       FontSize="14"
+                       TextColor="{AppThemeBinding Light=White, Dark=Black}"
+                       HorizontalTextAlignment="Center"/>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
