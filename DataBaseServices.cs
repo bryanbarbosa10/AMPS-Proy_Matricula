@@ -21,6 +21,7 @@ namespace AMPS
             _database.CreateTableAsync<Course>().Wait();
             _database.CreateTableAsync<Grade>().Wait();
             _database.CreateTableAsync<MatriculaItem>().Wait();
+            _database.CreateTableAsync<MatriculaFile>().Wait();
         }
 
 
@@ -238,11 +239,45 @@ namespace AMPS
             if (matricula.Id != 0)
                 return await _database.UpdateAsync(matricula);
 
-            return await _database.InsertAsync(matricula);
+            await _database.InsertAsync(matricula);
+
+            return matricula.Id;
         }
 
         public async Task<int> DeleteMatriculaAsync(MatriculaItem matricula)
         {
+            return await _database.DeleteAsync(matricula);
+        }
+        public async Task<int> SaveMatriculaFileAsync(MatriculaFile file)
+        {
+            return await _database.InsertAsync(file);
+        }
+
+        public async Task<List<MatriculaFile>> GetFilesForMatriculaAsync(int matriculaItemId)
+        {
+            return await _database.Table<MatriculaFile>()
+                .Where(f => f.MatriculaItemId == matriculaItemId)
+                .ToListAsync();
+        }
+
+        public async Task<int> DeleteMatriculaFileAsync(MatriculaFile file)
+        {
+            return await _database.DeleteAsync(file);
+        }
+        public async Task<int> DeleteMatriculaWithFilesAsync(MatriculaItem matricula)
+        {
+            var files = await GetFilesForMatriculaAsync(matricula.Id);
+
+            foreach (var file in files)
+            {
+                if (!string.IsNullOrWhiteSpace(file.FilePath) && File.Exists(file.FilePath))
+                {
+                    File.Delete(file.FilePath);
+                }
+
+                await _database.DeleteAsync(file);
+            }
+
             return await _database.DeleteAsync(matricula);
         }
     }

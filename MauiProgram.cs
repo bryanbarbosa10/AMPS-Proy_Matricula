@@ -23,7 +23,7 @@ namespace AMPS
             // Local database path
             string dbPath = Path.Combine(FileSystem.AppDataDirectory, "Student.db3");
 
-            // TEMP: delete DB for testing first boot
+            //TEMP: delete DB for testing first boot
             //if (File.Exists(dbPath))
             //{
             //    File.Delete(dbPath);

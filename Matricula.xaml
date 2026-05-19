@@ -1,82 +1,203 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AMPS.Matricula"
              Title="Mis Matrículas">
 
-    <VerticalStackLayout Padding="20" Spacing="15">
+    <Grid Padding="20">
 
-        <Label Text="Matrículas Registradas"
-               FontSize="20"
-               FontAttributes="Bold"
-               HorizontalOptions="Center"/>
+        <Grid RowDefinitions="Auto,*">
 
-        <Button Text="+"
-                FontSize="30"
-                WidthRequest="60"
-                HeightRequest="60"
-                CornerRadius="30"
-                BackgroundColor="#C8E6C9"
-                TextColor="Black"
-                HorizontalOptions="Center"
-                Clicked="OnAddMatriculaClicked"/>
+            <VerticalStackLayout Grid.Row="0" Spacing="10">
 
-        <Label Text="Añadir Matrícula"
-               HorizontalOptions="Center"/>
+                <Label Text="Matrículas Registradas"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource AmpsBlue}"
+                       HorizontalOptions="Center"/>
 
-        <CollectionView x:Name="MatriculasCollectionView">
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Frame BackgroundColor="#BBDEFB"
-                           Padding="15"
-                           CornerRadius="5"
-                           Margin="0,5">
+                <Button Text="+"
+                        FontSize="30"
+                        WidthRequest="60"
+                        HeightRequest="60"
+                        CornerRadius="30"
+                        BackgroundColor="#C8E6C9"
+                        TextColor="Black"
+                        HorizontalOptions="Center"
+                        Clicked="OnAddMatriculaClicked"/>
 
-                        <VerticalStackLayout>
+                <Label Text="Añadir matrícula"
+                       FontSize="14"
+                       TextColor="Gray"
+                       HorizontalOptions="Center"/>
 
-                            <Label Text="{Binding Semestre}"
-                                   FontSize="18"
-                                   FontAttributes="Bold"
-                                   HorizontalOptions="Center"/>
+            </VerticalStackLayout>
 
-                            <Label Text="{Binding Year}"
-                                   FontSize="14"
-                                   HorizontalOptions="Center"/>
+            <CollectionView Grid.Row="1"
+                            x:Name="MatriculasCollectionView"
+                            ItemsSource="{Binding Matriculas}"
+                            Margin="0,15,0,10">
 
-                            <Label Text="{Binding DateSaved, StringFormat='Guardado: {0:MM/dd/yyyy}'}"
-                                   FontSize="12"
-                                   HorizontalOptions="Center"/>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="15"
+                               CornerRadius="10"
+                               Margin="0,6"
+                               HasShadow="False"
+                               BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
 
-                        </VerticalStackLayout>
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnMatriculaTapped"
+                                                      CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
 
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                            <Grid ColumnDefinitions="*,Auto,Auto">
 
-        <Entry 
-            x:Name="SemesterEntry"
-            Placeholder="Nombre del semestre"
-            BackgroundColor="White"
-            TextColor="Black"/>
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
 
-        <Button
-            Text="Seleccionar PDF"
-            BackgroundColor="#E0E0E0"
-            TextColor="Black"
-            Clicked="OnPickPdfClicked"/>
+                                    <Label Text="{Binding Semestre}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=Black, Dark=White}" />
 
-        <Label
-            x:Name="PdfLabel"
-            Text="Ningún PDF seleccionado"
-            FontSize="14"
-            HorizontalOptions="Center"/>
+                                    <Label Text="{Binding FileMode}"
+                                           FontSize="13"
+                                           TextColor="{StaticResource AmpsBlue}" />
 
-        <Button
-            Text="Guardar Semestre"
-            BackgroundColor="#A5D6A7"
-            TextColor="Black"
-            Clicked="OnSaveSemesterClicked"/>
+                                    <Label Text="{Binding DateSaved, StringFormat='Guardado: {0:MM/dd/yyyy}'}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
 
-    </VerticalStackLayout>
+                                </VerticalStackLayout>
 
+                                <Button Grid.Column="1"
+                                        Text="Abrir"
+                                        BackgroundColor="Transparent"
+                                        TextColor="{StaticResource AmpsBlue}"
+                                        CommandParameter="{Binding .}"
+                                        Clicked="OnOpenMatriculaClicked"/>
+
+                                <Button Grid.Column="2"
+                                        Text="🗑"
+                                        FontSize="16"
+                                        WidthRequest="45"
+                                        HeightRequest="45"
+                                        BackgroundColor="Transparent"
+                                        TextColor="#EF5350"
+                                        CommandParameter="{Binding .}"
+                                        Clicked="OnDeleteMatriculaClicked"/>
+
+                            </Grid>
+
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </Grid>
+
+
+        <!-- Popup -->
+        <Grid x:Name="AddMatriculaOverlay"
+              IsVisible="False"
+              BackgroundColor="#99000000"
+              Padding="20">
+
+            <Frame VerticalOptions="Center"
+                   HorizontalOptions="Center"
+                   WidthRequest="520"
+                   CornerRadius="15"
+                   Padding="20"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
+                   BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
+
+                <VerticalStackLayout Spacing="12">
+
+                    <Label Text="Nueva matrícula"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource AmpsBlue}"
+                           HorizontalOptions="Center"/>
+
+                    <Label Text="Nombre del semestre"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+
+                    <Entry x:Name="SemesterEntry"
+                           Placeholder="Ejemplo: Agosto 2025"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                           PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+
+                    <Label Text="Tipo de evidencia"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+
+                    <Picker x:Name="FileModePicker"
+                            Title="Selecciona tipo"
+                            SelectedIndexChanged="OnFileModeChanged">
+                        <Picker.Items>
+                            <x:String>PDF</x:String>
+                            <x:String>WORD</x:String>
+                            <x:String>PHOTOS</x:String>
+                        </Picker.Items>
+                    </Picker>
+
+                    <Button x:Name="PickFileButton"
+                            Text="Seleccionar archivo"
+                            Clicked="OnPickMatriculaFileClicked"
+                            BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                            TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                            CornerRadius="10"/>
+
+                    <Label x:Name="SelectedFileLabel"
+                           Text="Ningún archivo seleccionado"
+                           FontSize="13"
+                           TextColor="Gray"
+                           HorizontalOptions="Center"/>
+
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="10"
+                          Margin="0,10,0,0">
+
+                        <Button Grid.Column="0"
+                                Text="Cancelar"
+                                Clicked="OnCancelMatriculaClicked"
+                                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                                TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                CornerRadius="10"/>
+
+                        <Button Grid.Column="1"
+                                Text="Guardar"
+                                Clicked="OnSaveMatriculaClicked"
+                                BackgroundColor="#C8E6C9"
+                                TextColor="Black"
+                                CornerRadius="10"/>
+
+                    </Grid>
+
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+
+
+        <Frame x:Name="ToastFrame"
+               IsVisible="False"
+               BackgroundColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+               CornerRadius="20"
+               Padding="15,10"
+               HorizontalOptions="Center"
+               VerticalOptions="End"
+               Margin="0,0,0,60"
+               HasShadow="True">
+
+            <Label x:Name="ToastLabel"
+                   Text=""
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light=White, Dark=Black}"
+                   HorizontalTextAlignment="Center"/>
+        </Frame>
+
+    </Grid>
 </ContentPage>
