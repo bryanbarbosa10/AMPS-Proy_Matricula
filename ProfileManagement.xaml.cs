@@ -1,138 +1,190 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 
-namespace AMPS
+namespace AMPS;
+
+public partial class ProfileManagement : ContentPage
 {
-    public partial class ProfileManagement : ContentPage
+    private readonly DataBaseServices _dbService;
+
+    private Student? _studentBeingEdited;
+
+    public ObservableCollection<Student> Profiles { get; set; } = new();
+
+    public ProfileManagement(DataBaseServices dbService)
     {
-        // DB service
-        private readonly DataBaseServices _dbService;
+        InitializeComponent();
+        _dbService = dbService;
+        BindingContext = this;
+    }
 
-        // Local list
-        public ObservableCollection<Student> Profiles { get; set; } = new();
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
 
-        public ProfileManagement(DataBaseServices dbService)
+        await LoadProfilesAsync();
+        UpdateActiveProfileLabel();
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        Profiles.Clear();
+
+        var students = await _dbService.GetStudentsAsync();
+
+        foreach (var student in students)
         {
-            InitializeComponent();
-            _dbService = dbService;
-            BindingContext = this;
+            Profiles.Add(student);
         }
 
-        // Reload profiles every time page opens
-        protected override async void OnAppearing()
+        ProfilesCollectionView.ItemsSource = Profiles;
+    }
+
+    private void UpdateActiveProfileLabel()
+    {
+        var activeStudent = ActiveProfileService.CurrentStudent;
+
+        if (activeStudent == null)
         {
-            base.OnAppearing();
+            ActiveProfileLabel.Text = "Perfil activo: Ninguno";
+            return;
+        }
 
-            var students = await _dbService.GetStudentsAsync();
-            ProfilesCollectionView.ItemsSource = students;
+        if (!string.IsNullOrWhiteSpace(activeStudent.Nickname))
+        {
+            ActiveProfileLabel.Text = $"Perfil activo: {activeStudent.Nickname}";
+        }
+        else
+        {
+            ActiveProfileLabel.Text = $"Perfil activo: {activeStudent.Name}";
+        }
+    }
 
-            if (ActiveProfileService.HasActiveProfile)
+    private async void OnAddProfileClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync($"{nameof(ProfileCreation)}?from=profiles");
+    }
+
+    private async void OnSelectProfileClicked(object sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not Student selectedStudent)
+            return;
+
+        await ActiveProfileService.SetActiveStudentAsync(selectedStudent);
+
+        UpdateActiveProfileLabel();
+
+        string displayName = !string.IsNullOrWhiteSpace(selectedStudent.Nickname)
+            ? selectedStudent.Nickname
+            : selectedStudent.Name;
+
+        await ShowToastAsync($"Perfil activo: {displayName}");
+    }
+
+    private void OnEditProfileClicked(object sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not Student student)
+            return;
+
+        _studentBeingEdited = student;
+
+        EditStudentIdEntry.Text = student.StudentId;
+        EditNameEntry.Text = student.Name;
+        EditNicknameEntry.Text = student.Nickname;
+        EditEmailEntry.Text = student.Email;
+
+        EditProfileOverlay.IsVisible = true;
+    }
+
+    private void OnCancelEditProfileClicked(object sender, EventArgs e)
+    {
+        ClearEditOverlay();
+        EditProfileOverlay.IsVisible = false;
+    }
+
+    private async void OnSaveEditProfileClicked(object sender, EventArgs e)
+    {
+        if (_studentBeingEdited == null)
+            return;
+
+        string name = EditNameEntry.Text?.Trim() ?? string.Empty;
+        string nickname = EditNicknameEntry.Text?.Trim() ?? string.Empty;
+        string email = EditEmailEntry.Text?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            await DisplayAlert("Error", "El nombre es requerido.", "OK");
+            return;
+        }
+
+        if (name.Length > 30)
+        {
+            await DisplayAlert("Error", "El nombre no puede exceder 30 caracteres.", "OK");
+            return;
+        }
+
+        if (nickname.Length > 40)
+        {
+            await DisplayAlert("Error", "El nickname no puede exceder 40 caracteres.", "OK");
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            bool validEmail = Regex.IsMatch(
+                email,
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+            );
+
+            if (!validEmail)
             {
-                ActiveProfileLabel.Text = $"Perfil activo: {ActiveProfileService.CurrentStudent.Nickname}";
-            }
-            else
-            {
-                ActiveProfileLabel.Text = "Perfil activo: Ninguno";
+                await DisplayAlert("Error", "Escribe un email válido.", "OK");
+                return;
             }
         }
 
-        // Load all profiles
-        private async Task LoadProfilesAsync()
+        _studentBeingEdited.Name = name;
+        _studentBeingEdited.Nickname = nickname;
+        _studentBeingEdited.Email = email;
+
+        await _dbService.UpdateStudentAsync(_studentBeingEdited);
+
+        if (ActiveProfileService.HasActiveProfile &&
+            ActiveProfileService.CurrentStudent?.Id == _studentBeingEdited.Id)
         {
-            var students = await _dbService.GetStudentsAsync();
-
-            Profiles.Clear();
-
-            foreach (var student in students)
-            {
-                Profiles.Add(student);
-            }
-
-            ProfilesCollectionView.ItemsSource = Profiles;
+            await ActiveProfileService.SetActiveStudentAsync(_studentBeingEdited);
         }
 
-        // Open create profile page
-        private async void OnAddProfileClicked(object sender, EventArgs e)
-        {
-            await Shell.Current.GoToAsync($"{nameof(ProfileCreation)}?from=profiles");
-        }
+        ClearEditOverlay();
 
-        // Edit one profile
-        private async void OnEditProfileClicked(object sender, EventArgs e)
-        {
-            if (sender is Button button && button.CommandParameter is Student selectedStudent)
-            {
-                // Ask for new name
-                string? newName = await DisplayPromptAsync(
-                    "Edit Name",
-                    "Enter the new name:",
-                    initialValue: selectedStudent.Name,
-                    maxLength: 30);
+        EditProfileOverlay.IsVisible = false;
 
-                if (newName == null)
-                    return;
+        await LoadProfilesAsync();
+        UpdateActiveProfileLabel();
 
-                newName = newName.Trim();
+        await ShowToastAsync("Perfil actualizado correctamente.");
+    }
 
-                if (string.IsNullOrWhiteSpace(newName))
-                {
-                    await DisplayAlert("Invalid Data", "Name cannot be empty.", "OK");
-                    return;
-                }
+    private void ClearEditOverlay()
+    {
+        _studentBeingEdited = null;
 
-                // Ask for new email
-                string? newEmail = await DisplayPromptAsync(
-                    "Edit Email",
-                    "Enter the new email (optional):",
-                    initialValue: selectedStudent.Email);
+        EditStudentIdEntry.Text = string.Empty;
+        EditNameEntry.Text = string.Empty;
+        EditNicknameEntry.Text = string.Empty;
+        EditEmailEntry.Text = string.Empty;
+    }
 
-                if (newEmail == null)
-                    return;
+    private async Task ShowToastAsync(string message)
+    {
+        ToastLabel.Text = message;
+        ToastFrame.Opacity = 0;
+        ToastFrame.IsVisible = true;
 
-                newEmail = newEmail.Trim();
+        await ToastFrame.FadeTo(1, 200);
+        await Task.Delay(1800);
+        await ToastFrame.FadeTo(0, 300);
 
-                // Validate email only if typed
-                if (!string.IsNullOrWhiteSpace(newEmail))
-                {
-                    bool validEmail = Regex.IsMatch(
-                        newEmail,
-                        @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                    );
-
-                    if (!validEmail)
-                    {
-                        await DisplayAlert("Invalid Email", "Please enter a valid email.", "OK");
-                        return;
-                    }
-                }
-
-                // Keep StudentId unchanged
-                selectedStudent.Name = newName;
-                selectedStudent.Email = newEmail;
-
-                await _dbService.UpdateStudentAsync(selectedStudent);
-
-                await DisplayAlert("Success", "Profile updated successfully.", "OK");
-
-                await LoadProfilesAsync();
-            }
-        }
-        private async void OnSelectProfileClicked(object sender, EventArgs e)
-        {
-            if (sender is Button button && button.CommandParameter is Student selectedStudent)
-            {
-                await ActiveProfileService.SetActiveStudentAsync(selectedStudent);
-
-                ActiveProfileLabel.Text = $"Perfil activo: {selectedStudent.Nickname}";
-
-                await DisplayAlert(
-                    "Perfil activo",
-                    $"Ahora estás usando el perfil: {selectedStudent.Nickname}",
-                    "OK"
-                );
-
-                await Shell.Current.GoToAsync("//Dashboard");
-            }
-        }
+        ToastFrame.IsVisible = false;
     }
 }

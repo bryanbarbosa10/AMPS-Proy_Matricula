@@ -6,6 +6,7 @@
 
     <Grid Padding="20">
 
+        <!-- Página principal -->
         <Grid RowDefinitions="Auto,*">
 
             <VerticalStackLayout Grid.Row="0" Spacing="10">
@@ -33,10 +34,20 @@
 
             </VerticalStackLayout>
 
+
+            <!-- Lista de matrículas guardadas -->
             <CollectionView Grid.Row="1"
                             x:Name="MatriculasCollectionView"
                             ItemsSource="{Binding Matriculas}"
                             Margin="0,15,0,10">
+
+                <CollectionView.EmptyView>
+                    <Label Text="Todavía no hay matrículas guardadas."
+                           TextColor="Gray"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           Margin="0,20"/>
+                </CollectionView.EmptyView>
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
@@ -47,12 +58,8 @@
                                BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
                                BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
 
-                            <Frame.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnMatriculaTapped"
-                                                      CommandParameter="{Binding .}" />
-                            </Frame.GestureRecognizers>
-
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="8">
 
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
 
@@ -98,90 +105,99 @@
         </Grid>
 
 
-        <!-- Popup -->
+        <!-- Popup para añadir matrícula -->
         <Grid x:Name="AddMatriculaOverlay"
               IsVisible="False"
               BackgroundColor="#99000000"
-              Padding="20">
+              Padding="15">
 
             <Frame VerticalOptions="Center"
-                   HorizontalOptions="Center"
-                   WidthRequest="520"
+                   HorizontalOptions="Fill"
+                   MaximumWidthRequest="520"
+                   MaximumHeightRequest="650"
                    CornerRadius="15"
                    Padding="20"
+                   Margin="0"
                    BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
                    BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
 
-                <VerticalStackLayout Spacing="12">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="12">
 
-                    <Label Text="Nueva matrícula"
-                           FontSize="22"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource AmpsBlue}"
-                           HorizontalOptions="Center"/>
+                        <Label Text="Nueva matrícula"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}"
+                               HorizontalOptions="Center"/>
 
-                    <Label Text="Nombre del semestre"
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+                        <Label Text="Nombre del semestre"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
-                    <Entry x:Name="SemesterEntry"
-                           Placeholder="Ejemplo: Agosto 2025"
-                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                           PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
-                           BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+                        <Entry x:Name="SemesterEntry"
+                               Placeholder="Ejemplo: Agosto 2025"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                               PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
-                    <Label Text="Tipo de evidencia"
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+                        <Label Text="Tipo de evidencia"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
-                    <Picker x:Name="FileModePicker"
-                            Title="Selecciona tipo"
-                            SelectedIndexChanged="OnFileModeChanged">
-                        <Picker.Items>
-                            <x:String>PDF</x:String>
-                            <x:String>WORD</x:String>
-                            <x:String>PHOTOS</x:String>
-                        </Picker.Items>
-                    </Picker>
+                        <Picker x:Name="FileModePicker"
+                                Title="Selecciona tipo"
+                                SelectedIndexChanged="OnFileModeChanged"
+                                TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                TitleColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}"
+                                BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}">
+                            <Picker.Items>
+                                <x:String>PDF</x:String>
+                                <x:String>WORD</x:String>
+                                <x:String>PHOTOS</x:String>
+                            </Picker.Items>
+                        </Picker>
 
-                    <Button x:Name="PickFileButton"
-                            Text="Seleccionar archivo"
-                            Clicked="OnPickMatriculaFileClicked"
-                            BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
-                            TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                            CornerRadius="10"/>
-
-                    <Label x:Name="SelectedFileLabel"
-                           Text="Ningún archivo seleccionado"
-                           FontSize="13"
-                           TextColor="Gray"
-                           HorizontalOptions="Center"/>
-
-                    <Grid ColumnDefinitions="*,*"
-                          ColumnSpacing="10"
-                          Margin="0,10,0,0">
-
-                        <Button Grid.Column="0"
-                                Text="Cancelar"
-                                Clicked="OnCancelMatriculaClicked"
+                        <Button x:Name="PickFileButton"
+                                Text="Seleccionar archivo"
+                                Clicked="OnPickMatriculaFileClicked"
                                 BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
                                 TextColor="{AppThemeBinding Light=Black, Dark=White}"
                                 CornerRadius="10"/>
 
-                        <Button Grid.Column="1"
-                                Text="Guardar"
-                                Clicked="OnSaveMatriculaClicked"
-                                BackgroundColor="#C8E6C9"
-                                TextColor="Black"
-                                CornerRadius="10"/>
+                        <Label x:Name="SelectedFileLabel"
+                               Text="Ningún archivo seleccionado"
+                               FontSize="13"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"/>
 
-                    </Grid>
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              Margin="0,10,0,0">
 
-                </VerticalStackLayout>
+                            <Button Grid.Column="0"
+                                    Text="Cancelar"
+                                    Clicked="OnCancelMatriculaClicked"
+                                    BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                                    TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                    CornerRadius="10"/>
+
+                            <Button Grid.Column="1"
+                                    Text="Guardar"
+                                    Clicked="OnSaveMatriculaClicked"
+                                    BackgroundColor="#C8E6C9"
+                                    TextColor="Black"
+                                    CornerRadius="10"/>
+
+                        </Grid>
+
+                    </VerticalStackLayout>
+                </ScrollView>
+
             </Frame>
         </Grid>
 
 
+        <!-- Toast interno -->
         <Frame x:Name="ToastFrame"
                IsVisible="False"
                BackgroundColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"

@@ -123,14 +123,15 @@
         <Grid x:Name="ExtractedCoursesOverlay"
               IsVisible="False"
               BackgroundColor="#99000000"
-              Padding="20">
+              Padding="15">
 
             <Frame VerticalOptions="Center"
-                   HorizontalOptions="Center"
-                   WidthRequest="700"
+                   HorizontalOptions="Fill"
+                   MaximumWidthRequest="700"
                    MaximumHeightRequest="650"
                    CornerRadius="15"
-                   Padding="20"
+                   Padding="15"
+                   Margin="0"
                    BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
                    BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
 
@@ -242,17 +243,19 @@
 
         <!-- Overlay para editar un curso existente -->
         <Grid x:Name="EditCourseOverlay"
-      IsVisible="False"
-      BackgroundColor="#99000000"
-      Padding="20">
+              IsVisible="False"
+              BackgroundColor="#99000000"
+              Padding="15">
 
             <Frame VerticalOptions="Center"
-           HorizontalOptions="Center"
-           WidthRequest="500"
-           CornerRadius="15"
-           Padding="20"
-           BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
-           BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
+                   HorizontalOptions="Fill"
+                   MaximumWidthRequest="500"
+                   MaximumHeightRequest="650"
+                   CornerRadius="15"
+                   Padding="15"
+                   Margin="0"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
+                   BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
 
                 <VerticalStackLayout Spacing="12">
 
@@ -264,39 +267,39 @@
                            HorizontalOptions="Center"/>
 
                     <Label Text="Código"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
                     <Entry x:Name="EditCodigoEntry"
-                   Placeholder="Código del curso"
-                   TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                   PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
-                   BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+                           Placeholder="Código del curso"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                           PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
                     <Label Text="Nombre"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
                     <Entry x:Name="EditNombreEntry"
-                   Placeholder="Nombre del curso"
-                   TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                   PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
-                   BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+                           Placeholder="Nombre del curso"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                           PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
                     <Label Text="Créditos"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
                     <Entry x:Name="EditCreditosEntry"
-                   Placeholder="Créditos"
-                   Keyboard="Numeric"
-                   TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                   PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
-                   BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+                           Placeholder="Créditos"
+                           Keyboard="Numeric"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                           PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
                     <Grid ColumnDefinitions="*,*,*"
-                  ColumnSpacing="10"
-                  Margin="0,10,0,0">
+                          ColumnSpacing="10"
+                          Margin="0,10,0,0">
 
                         <Button x:Name="DeleteCourseButton"
                                 Grid.Column="0"
@@ -307,18 +310,18 @@
                                 CornerRadius="10"/>
 
                         <Button Grid.Column="1"
-                        Text="Cancelar"
-                        Clicked="OnCancelEditCourseClicked"
-                        BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
-                        TextColor="{AppThemeBinding Light=Black, Dark=White}"
-                        CornerRadius="10"/>
+                                Text="Cancelar"
+                                Clicked="OnCancelEditCourseClicked"
+                                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                                TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                CornerRadius="10"/>
 
                         <Button Grid.Column="2"
-                        Text="Guardar"
-                        Clicked="OnSaveEditCourseClicked"
-                        BackgroundColor="{StaticResource AmpsBlue}"
-                        TextColor="White"
-                        CornerRadius="10"/>
+                                Text="Guardar"
+                                Clicked="OnSaveEditCourseClicked"
+                                BackgroundColor="{StaticResource AmpsBlue}"
+                                TextColor="White"
+                                CornerRadius="10"/>
 
                     </Grid>
 

@@ -2,110 +2,221 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AMPS.ProfileManagement"
-             Title="Administración de Perfiles">
+             Title="Administrar perfiles">
 
-    <VerticalStackLayout Padding="20" Spacing="15">
+    <Grid Padding="20">
 
-        <!-- Title -->
-        <Label
-            Text="Administración de Perfiles"
-            FontSize="26"
-            FontAttributes="Bold"
-            HorizontalOptions="Center" />
+        <!-- Contenido principal -->
+        <Grid RowDefinitions="Auto,*">
 
-        <!-- Active profile label -->
-        <Label
-            x:Name="ActiveProfileLabel"
-            Text="Perfil activo: Ninguno"
-            FontSize="16"
-            FontAttributes="Bold"
-            HorizontalOptions="Center" />
+            <VerticalStackLayout Grid.Row="0" Spacing="12">
 
-        <!-- Add profile -->
-        <Button
-            Text="+ Añadir Perfil"
-            Clicked="OnAddProfileClicked" />
+                <Label Text="Administrar perfiles"
+                       FontSize="26"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource AmpsBlue}"
+                       HorizontalOptions="Center" />
 
-        <!-- Profiles list -->
-        <CollectionView x:Name="ProfilesCollectionView">
+                <Label x:Name="ActiveProfileLabel"
+                       Text="Perfil activo: Ninguno"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}"
+                       HorizontalOptions="Center" />
 
-            <CollectionView.Header>
-                <Grid Padding="10"
-                      ColumnDefinitions="*,*,*,*,Auto,Auto"
-                      BackgroundColor="#2A2A2A">
+                <Button Text="+ Añadir perfil"
+                        Clicked="OnAddProfileClicked"
+                        BackgroundColor="{StaticResource AmpsBlue}"
+                        TextColor="White"
+                        CornerRadius="12"
+                        HeightRequest="48" />
 
-                    <Label Text="Nickname"
-                           FontAttributes="Bold"
-                           TextColor="White" />
+            </VerticalStackLayout>
 
-                    <Label Grid.Column="1"
-                           Text="Nombre"
-                           FontAttributes="Bold"
-                           TextColor="White" />
 
-                    <Label Grid.Column="2"
-                           Text="Student ID"
-                           FontAttributes="Bold"
-                           TextColor="White" />
+            <!-- Lista de perfiles -->
+            <CollectionView Grid.Row="1"
+                            x:Name="ProfilesCollectionView"
+                            ItemsSource="{Binding Profiles}"
+                            Margin="0,15,0,0">
 
-                    <Label Grid.Column="3"
-                           Text="Email"
-                           FontAttributes="Bold"
-                           TextColor="White" />
+                <CollectionView.EmptyView>
+                    <Label Text="Todavía no hay perfiles guardados."
+                           TextColor="Gray"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           Margin="0,20"/>
+                </CollectionView.EmptyView>
 
-                    <Label Grid.Column="4"
-                           Text="Usar"
-                           FontAttributes="Bold"
-                           TextColor="White" />
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="15"
+                               Margin="0,6"
+                               CornerRadius="12"
+                               HasShadow="False"
+                               BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
 
-                    <Label Grid.Column="5"
-                           Text="Editar"
-                           FontAttributes="Bold"
-                           TextColor="White" />
-                </Grid>
-            </CollectionView.Header>
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="8">
 
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Grid Padding="10"
-                          ColumnDefinitions="*,*,*,*,Auto,Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
 
-                        <!-- Nickname -->
-                        <Label Text="{Binding Nickname}"
+                                    <Label Text="{Binding Name}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                                    <Label Text="{Binding Nickname, StringFormat='Nickname: {0}'}"
+                                           FontSize="13"
+                                           TextColor="{StaticResource AmpsBlue}" />
+
+                                    <Label Text="{Binding StudentId, StringFormat='Student ID: {0}'}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                                    <Label Text="{Binding Email, StringFormat='University Email: {0}'}"
+                                           FontSize="12"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Text="Usar"
+                                        BackgroundColor="Transparent"
+                                        TextColor="{StaticResource AmpsBlue}"
+                                        CommandParameter="{Binding .}"
+                                        Clicked="OnSelectProfileClicked" />
+
+                                <Button Grid.Column="2"
+                                        Text="✏️"
+                                        FontSize="16"
+                                        WidthRequest="45"
+                                        HeightRequest="45"
+                                        BackgroundColor="Transparent"
+                                        TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                        CommandParameter="{Binding .}"
+                                        Clicked="OnEditProfileClicked" />
+
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </Grid>
+
+
+        <!-- Overlay para editar perfil -->
+        <Grid x:Name="EditProfileOverlay"
+              IsVisible="False"
+              BackgroundColor="#99000000"
+              Padding="15">
+
+            <Frame VerticalOptions="Center"
+                   HorizontalOptions="Fill"
+                   MaximumWidthRequest="520"
+                   MaximumHeightRequest="650"
+                   CornerRadius="15"
+                   Padding="20"
+                   Margin="0"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
+                   BorderColor="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
+
+                <ScrollView>
+                    <VerticalStackLayout Spacing="12">
+
+                        <Label Text="Editar perfil"
+                               FontSize="22"
                                FontAttributes="Bold"
-                               VerticalOptions="Center" />
+                               TextColor="{StaticResource AmpsBlue}"
+                               HorizontalOptions="Center"/>
 
-                        <!-- Name -->
-                        <Label Grid.Column="1"
-                               Text="{Binding Name}"
-                               VerticalOptions="Center" />
+                        <Label Text="Student ID"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
-                        <!-- Student ID -->
-                        <Label Grid.Column="2"
-                               Text="{Binding StudentId}"
-                               VerticalOptions="Center" />
+                        <Entry x:Name="EditStudentIdEntry"
+                               IsEnabled="False"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}"
+                               BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#333333}" />
 
-                        <!-- Email -->
-                        <Label Grid.Column="3"
-                               Text="{Binding Email}"
-                               VerticalOptions="Center" />
+                        <Label Text="Nombre"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
-                        <!-- Select button -->
-                        <Button Grid.Column="4"
-                                Text="Select"
-                                Clicked="OnSelectProfileClicked"
-                                CommandParameter="{Binding .}" />
+                        <Entry x:Name="EditNameEntry"
+                               Placeholder="Nombre"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                               PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
-                        <!-- Edit button -->
-                        <Button Grid.Column="5"
-                                Text="Edit"
-                                Clicked="OnEditProfileClicked"
-                                CommandParameter="{Binding .}" />
+                        <Label Text="Nickname"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
 
-                    </Grid>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                        <Entry x:Name="EditNicknameEntry"
+                               Placeholder="Nickname opcional"
+                               MaxLength="40"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                               PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
 
-    </VerticalStackLayout>
+                        <Label Text="University Email"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" />
+
+                        <Entry x:Name="EditEmailEntry"
+                               Placeholder="Email universitario opcional"
+                               Keyboard="Email"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                               PlaceholderColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#333333}" />
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              Margin="0,10,0,0">
+
+                            <Button Grid.Column="0"
+                                    Text="Cancelar"
+                                    Clicked="OnCancelEditProfileClicked"
+                                    BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                                    TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                    CornerRadius="10"/>
+
+                            <Button Grid.Column="1"
+                                    Text="Guardar"
+                                    Clicked="OnSaveEditProfileClicked"
+                                    BackgroundColor="{StaticResource AmpsBlue}"
+                                    TextColor="White"
+                                    CornerRadius="10"/>
+
+                        </Grid>
+
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Frame>
+        </Grid>
+
+
+        <!-- Toast interno -->
+        <Frame x:Name="ToastFrame"
+               IsVisible="False"
+               BackgroundColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+               CornerRadius="20"
+               Padding="15,10"
+               HorizontalOptions="Center"
+               VerticalOptions="End"
+               Margin="0,0,0,60"
+               HasShadow="True">
+
+            <Label x:Name="ToastLabel"
+                   Text=""
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light=White, Dark=Black}"
+                   HorizontalTextAlignment="Center"/>
+        </Frame>
+
+    </Grid>
 </ContentPage>

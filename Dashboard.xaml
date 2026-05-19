@@ -2,29 +2,262 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AMPS.Dashboard"
-             Title="Dashboard">
+             Title="AMPS">
 
-    <VerticalStackLayout Padding="30" Spacing="10">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
 
-        <Label
-            Text="Dashboard"
-            FontSize="28"
-            FontAttributes="Bold"
-            HorizontalOptions="Center" />
+            <!-- Welcome header -->
+            <Frame Padding="22"
+                   CornerRadius="24"
+                   HasShadow="False"
+                   BorderColor="{AppThemeBinding Light=#D6EAF8, Dark=#444444}"
+                   BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1E1E1E}">
 
-        <Label
-            x:Name="WelcomeLabel"
-            Text="Welcome"
-            FontSize="24"
-            FontAttributes="Bold"
-            HorizontalOptions="Center" />
+                <VerticalStackLayout Spacing="6">
 
-        <Label
-            x:Name="NicknameLabel"
-            Text=""
-            FontSize="16"
-            HorizontalOptions="Center" />
+                    <Label Text="AMPS"
+                           FontSize="36"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource AmpsBlue}"
+                           HorizontalOptions="Center"/>
 
-    </VerticalStackLayout>
+                    <Label x:Name="WelcomeLabel"
+                           Text="Welcome"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"/>
 
+                    <Label x:Name="NicknameLabel"
+                           Text=""
+                           FontSize="15"
+                           TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"/>
+
+                </VerticalStackLayout>
+            </Frame>
+
+
+            <!-- Perfil + Promedio -->
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="12">
+
+                <!-- Perfil -->
+                <Frame Grid.Column="0"
+                       Padding="16"
+                       CornerRadius="18"
+                       HasShadow="False"
+                       BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                    <VerticalStackLayout Spacing="8">
+
+                        <Label Text="Perfil"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}" />
+
+                        <Label Text="Número de estudiante"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                        <Label x:Name="StudentIdLabel"
+                               Text="N/A"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                        <Label Text="Email universitario"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                        <Label x:Name="StudentEmailLabel"
+                               Text="No registrado"
+                               FontSize="13"
+                               LineBreakMode="TailTruncation"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                    </VerticalStackLayout>
+                </Frame>
+
+
+                <!-- Promedio -->
+                <Frame Grid.Column="1"
+                       Padding="16"
+                       CornerRadius="18"
+                       HasShadow="False"
+                       BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                    <VerticalStackLayout Spacing="8">
+
+                        <Label Text="Promedio"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}" />
+
+                        <Label Text="GPA actual"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                        <Label x:Name="CurrentGpaLabel"
+                               Text="0.00"
+                               FontSize="42"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}"
+                               HorizontalOptions="Center"/>
+
+                        <Label x:Name="CompletedCreditsLabel"
+                               Text="Créditos completados: 0"
+                               FontSize="12"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                    </VerticalStackLayout>
+                </Frame>
+
+            </Grid>
+
+
+            <!-- Secuencial + Completion -->
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="12">
+
+                <!-- Secuencial -->
+                <Frame Grid.Column="0"
+                       Padding="16"
+                       CornerRadius="18"
+                       HasShadow="False"
+                       BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                    <VerticalStackLayout Spacing="8">
+
+                        <Label Text="Secuencial"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}" />
+
+                        <Label Text="Cursos"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                        <Label x:Name="CoursesDetectedLabel"
+                               Text="0 detectados"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                        <Label x:Name="CoursesCompletedLabel"
+                               Text="0 completados"
+                               FontSize="14"
+                               TextColor="{StaticResource AmpsBlue}" />
+
+                        <Label Text="Créditos"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                        <Label x:Name="CreditsProgressLabel"
+                               Text="0 / 0 créditos"
+                               FontSize="15"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                    </VerticalStackLayout>
+                </Frame>
+
+
+                <!-- Completion -->
+                <Frame Grid.Column="1"
+                       Padding="16"
+                       CornerRadius="18"
+                       HasShadow="False"
+                       BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444444}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+                    <VerticalStackLayout Spacing="10">
+
+                        <Label Text="Completion"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}" />
+
+                        <Label x:Name="CompletionPercentLabel"
+                               Text="0%"
+                               FontSize="44"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource AmpsBlue}"
+                               HorizontalOptions="Center"/>
+
+                        <ProgressBar x:Name="CompletionProgressBar"
+                                     Progress="0"
+                                     ProgressColor="{StaticResource AmpsBlue}"
+                                     HeightRequest="8" />
+
+                        <Label x:Name="CompletionDetailLabel"
+                               Text="0 de 0 cursos"
+                               FontSize="13"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light=Gray, Dark=#BBBBBB}" />
+
+                    </VerticalStackLayout>
+                </Frame>
+
+            </Grid>
+
+
+            <!-- Accesos rápidos -->
+            <Label Text="Accesos rápidos"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource AmpsBlue}" />
+
+            <Grid ColumnDefinitions="*,*"
+                  RowDefinitions="Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="12">
+
+                <Button Grid.Row="0"
+                        Grid.Column="0"
+                        Text="Secuencial"
+                        Clicked="OnSecuencialClicked"
+                        BackgroundColor="{StaticResource AmpsBlue}"
+                        TextColor="White"
+                        CornerRadius="14"
+                        HeightRequest="55"/>
+
+                <Button Grid.Row="0"
+                        Grid.Column="1"
+                        Text="Promedio"
+                        Clicked="OnPromedioClicked"
+                        BackgroundColor="{StaticResource AmpsBlue}"
+                        TextColor="White"
+                        CornerRadius="14"
+                        HeightRequest="55"/>
+
+                <Button Grid.Row="1"
+                        Grid.Column="0"
+                        Text="Matrícula"
+                        Clicked="OnMatriculaClicked"
+                        BackgroundColor="{StaticResource AmpsBlue}"
+                        TextColor="White"
+                        CornerRadius="14"
+                        HeightRequest="55"/>
+
+                <Button Grid.Row="1"
+                        Grid.Column="1"
+                        Text="Perfiles"
+                        Clicked="OnProfilesClicked"
+                        BackgroundColor="{StaticResource AmpsBlue}"
+                        TextColor="White"
+                        CornerRadius="14"
+                        HeightRequest="55"/>
+
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
