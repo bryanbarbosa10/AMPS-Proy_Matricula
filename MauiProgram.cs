@@ -1,7 +1,4 @@
-﻿
-
-
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace AMPS
 {
@@ -15,27 +12,45 @@ namespace AMPS
                 .UseMauiApp<App>()
                 .ConfigureFonts(fonts =>
                 {
-                    // Default fonts
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                    fonts.AddFont("OpenSans-Regular.ttf","OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf","OpenSansSemibold");
                 });
 
-            // Local database path
-            string dbPath = Path.Combine(FileSystem.AppDataDirectory, "Student.db3");
+            // Local SQLite database path
+            string databasePath = Path.Combine(
+                FileSystem.AppDataDirectory,
+                "Student.db3"
+            );
 
-            //TEMP: delete DB for testing first boot
-            //if (File.Exists(dbPath))
-            //{
-            //    File.Delete(dbPath);
-            //}
+            // TEMP: delete database for first boot testing
+            // if (File.Exists(databasePath))
+            // {
+            //     File.Delete(databasePath);
+            // }
 
-            // DB service
-            builder.Services.AddSingleton(s => new DataBaseServices(dbPath));
+            RegisterServices(builder, databasePath);
 
-            //Arreglando sequencial
+#if DEBUG
+            // Enable debug logs in development
+            builder.Logging.AddDebug();
+#endif
+
+            return builder.Build();
+        }
+
+        private static void RegisterServices(
+            MauiAppBuilder builder,
+            string databasePath)
+        {
+            // Database service
+            builder.Services.AddSingleton(
+                serviceProvider => new DataBaseServices(databasePath)
+            );
+
+            // Course extraction service
             builder.Services.AddSingleton<CourseExtractionService>();
 
-            // Pages
+            // Application pages
             builder.Services.AddTransient<ProfileCreation>();
             builder.Services.AddTransient<Dashboard>();
             builder.Services.AddTransient<Matricula>();
@@ -43,13 +58,6 @@ namespace AMPS
             builder.Services.AddTransient<Secuencial>();
             builder.Services.AddTransient<ProfileManagement>();
             builder.Services.AddTransient<SettingsPage>();
-
-#if DEBUG
-            // Debug log
-            builder.Logging.AddDebug();
-#endif
-
-            return builder.Build();
         }
     }
 }

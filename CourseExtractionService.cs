@@ -1,24 +1,25 @@
-﻿using UglyToad.PdfPig;
-using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml.Packaging;
 using System.Text;
 using System.Text.RegularExpressions;
+using UglyToad.PdfPig;
 
 namespace AMPS;
 
 public class CourseExtractionService
 {
+    // Extract courses from PDF or Word document
     public async Task<List<ExtractedCourse>> ExtractCoursesAsync(FileResult file)
     {
         string extension = Path.GetExtension(file.FileName).ToLower();
 
-        string text = extension switch
+        string extractedText = extension switch
         {
             ".pdf" => await ExtractTextFromPdfAsync(file),
             ".docx" => await ExtractTextFromWordAsync(file),
             _ => string.Empty
         };
 
-        return ParseCoursesFromText(text);
+        return ParseCoursesFromText(extractedText);
     }
 
     private async Task<string> ExtractTextFromPdfAsync(FileResult file)
@@ -44,9 +45,9 @@ public class CourseExtractionService
 
         var builder = new StringBuilder();
 
-        using var wordDoc = WordprocessingDocument.Open(tempPath, false);
+        using var wordDocument = WordprocessingDocument.Open(tempPath, false);
 
-        var body = wordDoc.MainDocumentPart?.Document.Body;
+        var body = wordDocument.MainDocumentPart?.Document?.Body;
 
         if (body != null)
         {
@@ -56,11 +57,16 @@ public class CourseExtractionService
         return builder.ToString();
     }
 
+    // Copy uploaded file into temporary cache
     private async Task<string> CopyFileToTempAsync(FileResult file)
     {
-        string tempPath = Path.Combine(FileSystem.CacheDirectory, file.FileName);
+        string tempPath = Path.Combine(
+            FileSystem.CacheDirectory,
+            file.FileName
+        );
 
         using var sourceStream = await file.OpenReadAsync();
+
         using var destinationStream = File.Create(tempPath);
 
         await sourceStream.CopyToAsync(destinationStream);
@@ -70,27 +76,14 @@ public class CourseExtractionService
 
     private List<ExtractedCourse> ParseCoursesFromText(string text)
     {
-        var courses = new List<ExtractedCourse>();
+        var extractedCourses = new List<ExtractedCourse>();
 
         if (string.IsNullOrWhiteSpace(text))
-            return courses;
+            return extractedCourses;
 
-        // Limpieza básica del texto extraído
-        text = text.Replace("\r", "\n");
-        text = Regex.Replace(text, @"[ \t]+", " ");
-        text = Regex.Replace(text, @"\n+", "\n");
+        text = CleanExtractedText(text);
 
-        /*
-         Detecta patrones como:
-         COMP 2051 – Desarrollo Web Lado – Cliente (“Front – End”) 3
-         COMP 2120 – Lógica de programación 3
-         MATH 2251- Cálculo I 5
-         GESP 1101 – Español I 3
-         GEIC 1010 – Tecnología de la Información y Computadoras 3
-         *GEEN ___02 – Inglés II 3
-        */
-
-        var pattern =
+        string pattern =
             @"(?<code>\*?[A-Z]{4}\s?(?:\d{4}|_{2,}\d{0,2}))\s*[–—-]\s*(?<name>.*?)(?=\s+(?<credits>[1-5])(?:\s|$))";
 
         var matches = Regex.Matches(
@@ -101,53 +94,65 @@ public class CourseExtractionService
 
         foreach (Match match in matches)
         {
-            string codigo = match.Groups["code"].Value
+            string code = match.Groups["code"].Value
                 .Replace("*", "")
                 .Trim();
 
-            string nombre = match.Groups["name"].Value.Trim();
+            string name = match.Groups["name"].Value.Trim();
 
             string creditsText = match.Groups["credits"].Value.Trim();
 
-            if (!int.TryParse(creditsText, out int creditos))
+            if (!int.TryParse(creditsText, out int credits))
                 continue;
 
-            // Evita nombres demasiado largos por culpa de texto pegado del PDF
-            nombre = CleanCourseName(nombre);
+            name = CleanCourseName(name);
 
-            if (string.IsNullOrWhiteSpace(codigo) ||
-                string.IsNullOrWhiteSpace(nombre))
+            if (string.IsNullOrWhiteSpace(code) ||
+                string.IsNullOrWhiteSpace(name))
+            {
                 continue;
+            }
 
-            // Evita duplicados simples
-            bool alreadyExists = courses.Any(c =>
-                c.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase) &&
-                c.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase));
+            bool alreadyExists = extractedCourses.Any(course =>
+                course.Codigo.Equals(code, StringComparison.OrdinalIgnoreCase) &&
+                course.Nombre.Equals(name, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (alreadyExists)
                 continue;
 
-            courses.Add(new ExtractedCourse
+            extractedCourses.Add(new ExtractedCourse
             {
-                Codigo = codigo,
-                Nombre = nombre,
-                Creditos = creditos,
+                Codigo = code,
+                Nombre = name,
+                Creditos = credits,
                 IsSelected = true
             });
         }
 
-        return courses;
+        return extractedCourses;
     }
 
-    private string CleanCourseName(string nombre)
+    private string CleanExtractedText(string text)
     {
-        if (string.IsNullOrWhiteSpace(nombre))
+        text = text.Replace("\r", "\n");
+
+        text = Regex.Replace(text, @"[ \t]+", " ");
+
+        text = Regex.Replace(text, @"\n+", "\n");
+
+        return text;
+    }
+
+    private string CleanCourseName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
             return string.Empty;
 
-        nombre = nombre.Replace("\n", " ");
-        nombre = Regex.Replace(nombre, @"\s+", " ").Trim();
+        name = name.Replace("\n", " ");
 
-        // Corta texto basura común que puede aparecer después del nombre
+        name = Regex.Replace(name, @"\s+", " ").Trim();
+
         string[] stopWords =
         {
             "Firma del estudiante",
@@ -165,14 +170,17 @@ public class CourseExtractionService
 
         foreach (string stopWord in stopWords)
         {
-            int index = nombre.IndexOf(stopWord, StringComparison.OrdinalIgnoreCase);
+            int index = name.IndexOf(
+                stopWord,
+                StringComparison.OrdinalIgnoreCase
+            );
 
             if (index >= 0)
             {
-                nombre = nombre.Substring(0, index).Trim();
+                name = name.Substring(0, index).Trim();
             }
         }
 
-        return nombre;
+        return name;
     }
 }

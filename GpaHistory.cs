@@ -4,6 +4,7 @@ namespace AMPS;
 
 public class GpaHistory
 {
+    // Local database id
     [PrimaryKey, AutoIncrement]
     public int Id { get; set; }
 
@@ -13,6 +14,7 @@ public class GpaHistory
 
     public double NewGpa { get; set; }
 
+    // Summary of courses added during GPA update
     public string AddedCoursesSummary { get; set; } = string.Empty;
 
     public int TotalCreditsAdded { get; set; }

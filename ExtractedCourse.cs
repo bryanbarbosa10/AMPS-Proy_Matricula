@@ -2,6 +2,7 @@
 
 public class ExtractedCourse
 {
+    // Temporary course data extracted from a document
     public string Codigo { get; set; } = string.Empty;
 
     public string Nombre { get; set; } = string.Empty;

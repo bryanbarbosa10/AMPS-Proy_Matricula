@@ -25,7 +25,7 @@
             <!-- Name -->
             <Entry
                 x:Name="NameEntry"
-                Placeholder="Name"
+                Placeholder="Nombre"
                 MaxLength="30"
                 BackgroundColor="White"
                 TextColor="Black" />
@@ -33,7 +33,7 @@
             <!-- Nickname -->
             <Entry 
                 x:Name="NicknameEntry"
-                Placeholder="Nickname opcional"
+                Placeholder="Nickname (opcional)"
                 MaxLength="40"
                 BackgroundColor="White"
                 TextColor="Black"/>
@@ -41,7 +41,7 @@
             <!-- Student ID -->
             <Entry
                 x:Name="StudentIdEntry"
-                Placeholder="Student ID"
+                Placeholder="ID Estudiante"
                 MaxLength="25"
                 BackgroundColor="White"
                 TextColor="Black" />
@@ -49,7 +49,7 @@
             <!-- Optional email -->
             <Entry
                 x:Name="EmailEntry"
-                Placeholder="University Email (Optional)"
+                Placeholder="Email Universitario (opcional)"
                 Keyboard="Email"
                 BackgroundColor="White"
                 TextColor="Black" />

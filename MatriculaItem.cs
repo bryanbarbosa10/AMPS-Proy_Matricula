@@ -13,7 +13,8 @@ public class MatriculaItem
 
     public string Year { get; set; } = string.Empty;
 
-    public DateTime DateSaved { get; set; }
-
     public string FileMode { get; set; } = string.Empty;
+
+    // Date when the enrollment record was saved
+    public DateTime DateSaved { get; set; }
 }

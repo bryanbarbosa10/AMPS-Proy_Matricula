@@ -4,6 +4,7 @@ namespace AMPS;
 
 public class Course
 {
+    // Local database id
     [PrimaryKey, AutoIncrement]
     public int Id { get; set; }
 

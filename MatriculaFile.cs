@@ -17,5 +17,6 @@ public class MatriculaFile
 
     public string FileType { get; set; } = string.Empty;
 
+    // Date when the file was saved internally
     public DateTime DateSaved { get; set; }
 }

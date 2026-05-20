@@ -4,23 +4,28 @@ namespace AMPS;
 
 public partial class Secuencial : ContentPage
 {
+    // Main database service
     private readonly DataBaseServices _dbService;
 
-    // Analizar PDF o Word y extraer cursos
+    // Service used to extract courses from PDF or Word files
     private readonly CourseExtractionService _courseExtractionService;
 
+    // Prevents checkbox events while loading data
     private bool _isLoadingData = false;
 
-    private Course? _courseBeingEdited;
-
+    // Tracks if overlay is creating a new course
     private bool _isCreatingNewCourse = false;
 
-    // Guarda el estado anterior de cada curso
+    // Current course being edited
+    private Course? _courseBeingEdited;
+
+    // Stores previous completion state of each course
     private readonly Dictionary<int, bool> _completedSnapshot = new();
 
+    // Main course list shown in secuencial
     public ObservableCollection<Course> MiSecuencial { get; set; } = new();
 
-    // Lista temporal de cursos
+    // Temporary extracted courses before saving
     public ObservableCollection<ExtractedCourse> CursosExtraidos { get; set; } = new();
 
     public Secuencial(
@@ -28,8 +33,10 @@ public partial class Secuencial : ContentPage
         CourseExtractionService courseExtractionService)
     {
         InitializeComponent();
+
         _dbService = dbService;
         _courseExtractionService = courseExtractionService;
+
         BindingContext = this;
     }
 
@@ -37,6 +44,7 @@ public partial class Secuencial : ContentPage
     {
         base.OnAppearing();
 
+        // Prevent entering secuencial without active profile
         if (!ActiveProfileService.HasActiveProfile)
         {
             await DisplayAlert(
@@ -46,40 +54,99 @@ public partial class Secuencial : ContentPage
             );
 
             await Shell.Current.GoToAsync("//ProfileManagement");
+
             return;
         }
 
-        await CargarDatos();
+        await LoadDataAsync();
     }
 
+    // Load all courses for current active student
+    private async Task LoadDataAsync()
+    {
+        _isLoadingData = true;
+
+        List<Course> courses =
+            await _dbService.GetCoursesForActiveStudentAsync();
+
+        MiSecuencial.Clear();
+
+        _completedSnapshot.Clear();
+
+        foreach (Course course in courses)
+        {
+            MiSecuencial.Add(course);
+
+            // Save previous completion state
+            _completedSnapshot[course.Id] = course.IsCompleted;
+        }
+
+        bool hasCourses = MiSecuencial.Count > 0;
+
+        // Upload button only appears if no courses exist
+        UploadSecuencialButton.IsVisible = !hasCourses;
+
+        FileNameLabel.IsVisible = !hasCourses;
+
+        // Manual course button appears after courses exist
+        AddManualCourseButton.IsVisible = hasCourses;
+
+        // Save progress button only appears after changes
+        SaveProgressButton.IsVisible = false;
+
+        _isLoadingData = false;
+    }
+
+    // Upload and analyze secuencial document
     private async void OnUploadDocumentClicked(object sender, EventArgs e)
     {
         try
         {
-            var customFileType = new FilePickerFileType(
+            // Allow PDF and Word files
+            FilePickerFileType customFileType = new(
                 new Dictionary<DevicePlatform, IEnumerable<string>>
                 {
-                    // Se permite PDF y Word
-                    { DevicePlatform.iOS, new[] { "com.adobe.pdf", "org.openxmlformats.wordprocessingml.document" } },
-                    { DevicePlatform.Android, new[] { "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" } },
-                    { DevicePlatform.WinUI, new[] { ".pdf", ".docx" } },
+                    {
+                        DevicePlatform.iOS,
+                        new[]
+                        {
+                            "com.adobe.pdf",
+                            "org.openxmlformats.wordprocessingml.document"
+                        }
+                    },
+
+                    {
+                        DevicePlatform.Android,
+                        new[]
+                        {
+                            "application/pdf",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        }
+                    },
+
+                    {
+                        DevicePlatform.WinUI,
+                        new[] { ".pdf", ".docx" }
+                    }
                 });
 
             PickOptions options = new()
             {
                 PickerTitle = "Selecciona tu documento secuencial",
-                FileTypes = customFileType,
+                FileTypes = customFileType
             };
 
-            var result = await FilePicker.Default.PickAsync(options);
+            FileResult? result =
+                await FilePicker.Default.PickAsync(options);
 
             if (result == null)
                 return;
 
             FileNameLabel.Text = $"Archivo: {result.FileName}";
 
-            // Aquí se analiza el archivo y se intentan extraer cursos automáticamente
-            var extractedCourses = await _courseExtractionService.ExtractCoursesAsync(result);
+            // Analyze file and extract possible courses
+            List<ExtractedCourse> extractedCourses =
+                await _courseExtractionService.ExtractCoursesAsync(result);
 
             if (extractedCourses.Count == 0)
             {
@@ -92,109 +159,85 @@ public partial class Secuencial : ContentPage
                 return;
             }
 
-            CursosExtraidos.Clear();
-
-            foreach (var course in extractedCourses)
-            {
-                CursosExtraidos.Add(course);
-            }
-
-            // Mostrar las cards editables
-            ExtractedCoursesCollectionView.ItemsSource = CursosExtraidos;
-
-            // Muestra como popup
-            ExtractedCoursesOverlay.IsVisible = true;
+            LoadExtractedCourses(extractedCourses);
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"No se pudo analizar el archivo: {ex.Message}", "OK");
+            await DisplayAlert(
+                "Error",
+                $"No se pudo analizar el archivo: {ex.Message}",
+                "OK"
+            );
         }
     }
 
-    private void OnCancelExtractedCoursesClicked(object sender, EventArgs e)
+    // Load extracted courses into temporary overlay
+    private void LoadExtractedCourses(
+        List<ExtractedCourse> extractedCourses)
     {
         CursosExtraidos.Clear();
+
+        foreach (ExtractedCourse course in extractedCourses)
+        {
+            CursosExtraidos.Add(course);
+        }
+
+        // Show editable extracted courses popup
+        ExtractedCoursesCollectionView.ItemsSource = CursosExtraidos;
+
+        ExtractedCoursesOverlay.IsVisible = true;
+    }
+
+    private void OnCancelExtractedCoursesClicked(
+        object sender,
+        EventArgs e)
+    {
+        CursosExtraidos.Clear();
+
         ExtractedCoursesOverlay.IsVisible = false;
     }
 
-    private async Task CargarDatos()
-    {
-        _isLoadingData = true;
-
-        var lista = await _dbService.GetCoursesForActiveStudentAsync();
-
-        MiSecuencial.Clear();
-        _completedSnapshot.Clear();
-
-        foreach (var curso in lista)
-        {
-            MiSecuencial.Add(curso);
-            _completedSnapshot[curso.Id] = curso.IsCompleted;
-        }
-
-        bool hasCourses = MiSecuencial.Count > 0;
-
-        // Si ya hay cursos se esconde el botón de subir secuencial
-        UploadSecuencialButton.IsVisible = !hasCourses;
-        FileNameLabel.IsVisible = !hasCourses;
-
-        // Si ya hay cursos, se muestra para añadir cursos manualmente
-        AddManualCourseButton.IsVisible = hasCourses;
-
-        // El botón de guardar solo aparece cuando el usuario cambia algún checkmark
-        SaveProgressButton.IsVisible = false;
-
-        _isLoadingData = false;
-    }
-
-    private async void OnAcceptExtractedCoursesClicked(object sender, EventArgs e)
+    // Save selected extracted courses into database
+    private async void OnAcceptExtractedCoursesClicked(
+        object sender,
+        EventArgs e)
     {
         if (!ActiveProfileService.HasActiveProfile)
         {
-            await DisplayAlert("Error", "No hay perfil activo.", "OK");
+            await DisplayAlert(
+                "Error",
+                "No hay perfil activo.",
+                "OK"
+            );
+
             return;
         }
 
-        var selectedCourses = CursosExtraidos
-            .Where(c => c.IsSelected)
-            .ToList();
+        List<ExtractedCourse> selectedCourses =
+            CursosExtraidos
+                .Where(course => course.IsSelected)
+                .ToList();
 
         if (selectedCourses.Count == 0)
         {
-            await DisplayAlert("AMPS", "No seleccionaste cursos para añadir.", "OK");
+            await DisplayAlert(
+                "AMPS",
+                "No seleccionaste cursos para añadir.",
+                "OK"
+            );
+
             return;
         }
 
-        int savedCount = 0;
-
-        foreach (var extracted in selectedCourses)
-        {
-            // Validación básica para evitar guardar cursos incompletos
-            if (string.IsNullOrWhiteSpace(extracted.Codigo) ||
-                string.IsNullOrWhiteSpace(extracted.Nombre) ||
-                extracted.Creditos <= 0)
-            {
-                continue;
-            }
-
-            var course = new Course
-            {
-                Codigo = extracted.Codigo.Trim(),
-                Nombre = extracted.Nombre.Trim(),
-                Creditos = extracted.Creditos,
-                IsCompleted = false
-            };
-
-            await _dbService.SaveCourseAsync(course);
-            savedCount++;
-        }
+        int savedCount =
+            await SaveExtractedCoursesAsync(selectedCourses);
 
         CursosExtraidos.Clear();
-        //esconder popup
+
+        // Hide popup after saving
         ExtractedCoursesOverlay.IsVisible = false;
 
-        // Refresca la lista principal del secuencial luego de aceptar los cursos detectados
-        await CargarDatos();
+        await LoadDataAsync();
 
         await DisplayAlert(
             "AMPS",
@@ -203,10 +246,125 @@ public partial class Secuencial : ContentPage
         );
     }
 
-    private async Task<string?> PreguntarYGuardarNotaAsync(Course curso)
+    // Save valid extracted courses
+    private async Task<int> SaveExtractedCoursesAsync(
+        List<ExtractedCourse> selectedCourses)
     {
-        string resultado = await DisplayActionSheet(
-            $"Nota final para {curso.Nombre} ({curso.Codigo})",
+        int savedCount = 0;
+
+        foreach (ExtractedCourse extractedCourse in selectedCourses)
+        {
+            // Prevent invalid or incomplete courses
+            if (!IsValidExtractedCourse(extractedCourse))
+                continue;
+
+            var course = new Course
+            {
+                Codigo = extractedCourse.Codigo.Trim(),
+                Nombre = extractedCourse.Nombre.Trim(),
+                Creditos = extractedCourse.Creditos,
+                IsCompleted = false
+            };
+
+            await _dbService.SaveCourseAsync(course);
+
+            savedCount++;
+        }
+
+        return savedCount;
+    }
+
+    // Validate extracted course data
+    private bool IsValidExtractedCourse(ExtractedCourse course)
+    {
+        return
+            !string.IsNullOrWhiteSpace(course.Codigo) &&
+            !string.IsNullOrWhiteSpace(course.Nombre) &&
+            course.Creditos > 0;
+    }
+
+    // Save completion progress and GPA changes
+    private async void OnGuardarProgresoClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (!ActiveProfileService.HasActiveProfile)
+        {
+            await DisplayAlert(
+                "Error",
+                "No hay perfil activo.",
+                "OK"
+            );
+
+            return;
+        }
+
+        // Save GPA before modifications
+        double previousGpa =
+            await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+
+        var addedCoursesSummary = new List<string>();
+
+        int totalCreditsAdded = 0;
+
+        foreach (Course course in MiSecuencial)
+        {
+            bool wasCompletedBefore =
+                _completedSnapshot.ContainsKey(course.Id) &&
+                _completedSnapshot[course.Id];
+
+            // Detect newly completed course
+            bool isNewlyCompleted =
+                course.IsCompleted && !wasCompletedBefore;
+
+            // Detect unchecked course
+            bool wasUnchecked =
+                !course.IsCompleted && wasCompletedBefore;
+
+            await _dbService.SaveCourseAsync(course);
+
+            // Ask for final grade if course was completed
+            if (isNewlyCompleted)
+            {
+                string? grade =
+                    await AskAndSaveGradeAsync(course);
+
+                if (!string.IsNullOrWhiteSpace(grade))
+                {
+                    addedCoursesSummary.Add(
+                        $"{course.Nombre} ({course.Codigo}) - Nota: {grade}"
+                    );
+
+                    totalCreditsAdded += course.Creditos;
+                }
+            }
+
+            // Remove grade if course becomes unchecked
+            if (wasUnchecked)
+            {
+                await _dbService.DeleteGradeForCourseAsync(course);
+            }
+        }
+
+        // Save GPA history card if changes happened
+        await SaveGpaHistoryIfNeededAsync(
+            previousGpa,
+            addedCoursesSummary,
+            totalCreditsAdded
+        );
+
+        await LoadDataAsync();
+
+        await ShowToastAsync(
+            "Progreso guardado correctamente."
+        );
+    }
+
+    // Ask user for final grade and save it
+    private async Task<string?> AskAndSaveGradeAsync(Course course)
+    {
+        string result = await DisplayActionSheet(
+            $"Nota final para {course.Nombre} ({course.Codigo})",
             "Luego",
             null,
             "A",
@@ -216,202 +374,253 @@ public partial class Secuencial : ContentPage
             "F"
         );
 
-        if (string.IsNullOrWhiteSpace(resultado) || resultado == "Luego")
-            return null;
-
-        var nuevaNota = new Grade
+        if (string.IsNullOrWhiteSpace(result) ||
+            result == "Luego")
         {
-            Materia = curso.Nombre,
-            Creditos = curso.Creditos,
-            Calificacion = resultado
+            return null;
+        }
+
+        var grade = new Grade
+        {
+            Materia = course.Nombre,
+            Creditos = course.Creditos,
+            Calificacion = result
         };
 
-        await _dbService.SaveGradeAsync(nuevaNota);
+        await _dbService.SaveGradeAsync(grade);
 
-        return resultado;
+        return result;
     }
 
-    private async void OnGuardarProgresoClicked(object sender, EventArgs e)
+    // Save GPA history entry if new courses were completed
+    private async Task SaveGpaHistoryIfNeededAsync(
+        double previousGpa,
+        List<string> addedCoursesSummary,
+        int totalCreditsAdded)
     {
-        if (!ActiveProfileService.HasActiveProfile)
-        {
-            await DisplayAlert("Error", "No hay perfil activo.", "OK");
+        if (addedCoursesSummary.Count == 0)
             return;
-        }
 
-        double previousGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
+        double newGpa =
+            await _dbService.CalculateCurrentGpaForActiveStudentAsync();
 
-        var addedCoursesSummary = new List<string>();
-        int totalCreditsAdded = 0;
-
-        foreach (var curso in MiSecuencial)
+        var history = new GpaHistory
         {
-            bool wasCompletedBefore = _completedSnapshot.ContainsKey(curso.Id) &&
-                                      _completedSnapshot[curso.Id];
+            PreviousGpa = previousGpa,
+            NewGpa = newGpa,
+            AddedCoursesSummary =
+                string.Join("\n", addedCoursesSummary),
 
-            bool isNewlyCompleted = curso.IsCompleted && !wasCompletedBefore;
+            TotalCreditsAdded = totalCreditsAdded,
 
-            bool wasUnchecked = !curso.IsCompleted && wasCompletedBefore;
+            DateSaved = DateTime.Now
+        };
 
-            await _dbService.SaveCourseAsync(curso);
-
-            if (isNewlyCompleted)
-            {
-                string? nota = await PreguntarYGuardarNotaAsync(curso);
-
-                if (!string.IsNullOrWhiteSpace(nota))
-                {
-                    addedCoursesSummary.Add($"{curso.Nombre} ({curso.Codigo}) - Nota: {nota}");
-                    totalCreditsAdded += curso.Creditos;
-                }
-            }
-
-            if (wasUnchecked)
-            {
-                await _dbService.DeleteGradeForCourseAsync(curso);
-                // Si usas historial agrupado, no borraremos tarjetas viejas automáticamente.
-                // El historial representa cambios pasados, no el estado actual.
-            }
-        }
-
-        if (addedCoursesSummary.Count > 0)
-        {
-            double newGpa = await _dbService.CalculateCurrentGpaForActiveStudentAsync();
-
-            var history = new GpaHistory
-            {
-                PreviousGpa = previousGpa,
-                NewGpa = newGpa,
-                AddedCoursesSummary = string.Join("\n", addedCoursesSummary),
-                TotalCreditsAdded = totalCreditsAdded,
-                DateSaved = DateTime.Now
-            };
-
-            await _dbService.SaveGpaHistoryAsync(history);
-        }
-
-        await CargarDatos();
-
-        await ShowToastAsync("Progreso guardado correctamente.");
+        await _dbService.SaveGpaHistoryAsync(history);
     }
 
+    // Open overlay to edit existing course
     private void OnEditCourseClicked(object sender, EventArgs e)
     {
-        if (sender is not Button button || button.CommandParameter is not Course curso)
+        if (sender is not Button button ||
+            button.CommandParameter is not Course course)
+        {
             return;
+        }
 
-        _courseBeingEdited = curso;
+        _courseBeingEdited = course;
+
         _isCreatingNewCourse = false;
 
-        EditCourseTitleLabel.Text = "Editar curso";
-        DeleteCourseButton.IsVisible = true;
-
-        EditCodigoEntry.Text = curso.Codigo;
-        EditNombreEntry.Text = curso.Nombre;
-        EditCreditosEntry.Text = curso.Creditos.ToString();
-
-        EditCourseOverlay.IsVisible = true;
+        OpenCourseOverlay(
+            "Editar curso",
+            course.Codigo,
+            course.Nombre,
+            course.Creditos.ToString(),
+            true
+        );
     }
 
-    private void OnCancelEditCourseClicked(object sender, EventArgs e)
+    // Open overlay to create manual course
+    private void OnAddManualCourseClicked(
+        object sender,
+        EventArgs e)
     {
         _courseBeingEdited = null;
-        _isCreatingNewCourse = false;
 
-        EditCourseTitleLabel.Text = "Editar curso";
-        DeleteCourseButton.IsVisible = true;
-
-        EditCodigoEntry.Text = string.Empty;
-        EditNombreEntry.Text = string.Empty;
-        EditCreditosEntry.Text = string.Empty;
-
-        EditCourseOverlay.IsVisible = false;
-    }
-
-    private void OnAddManualCourseClicked(object sender, EventArgs e)
-    {
-        _courseBeingEdited = null;
         _isCreatingNewCourse = true;
 
-        EditCourseTitleLabel.Text = "Añadir curso";
-        DeleteCourseButton.IsVisible = false;
+        OpenCourseOverlay(
+            "Añadir curso",
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            false
+        );
+    }
 
-        EditCodigoEntry.Text = string.Empty;
-        EditNombreEntry.Text = string.Empty;
-        EditCreditosEntry.Text = string.Empty;
+    // Configure and show edit overlay
+    private void OpenCourseOverlay(
+        string title,
+        string code,
+        string name,
+        string credits,
+        bool showDeleteButton)
+    {
+        EditCourseTitleLabel.Text = title;
+
+        DeleteCourseButton.IsVisible = showDeleteButton;
+
+        EditCodigoEntry.Text = code;
+        EditNombreEntry.Text = name;
+        EditCreditosEntry.Text = credits;
 
         EditCourseOverlay.IsVisible = true;
     }
 
-    private async void OnSaveEditCourseClicked(object sender, EventArgs e)
+    private void OnCancelEditCourseClicked(
+        object sender,
+        EventArgs e)
     {
-        string codigo = EditCodigoEntry.Text?.Trim() ?? string.Empty;
-        string nombre = EditNombreEntry.Text?.Trim() ?? string.Empty;
-        string creditosText = EditCreditosEntry.Text?.Trim() ?? string.Empty;
+        CloseCourseOverlay();
+    }
 
-        if (string.IsNullOrWhiteSpace(codigo))
+    // Save edited or manually created course
+    private async void OnSaveEditCourseClicked(
+        object sender,
+        EventArgs e)
+    {
+        string code =
+            EditCodigoEntry.Text?.Trim() ?? string.Empty;
+
+        string name =
+            EditNombreEntry.Text?.Trim() ?? string.Empty;
+
+        string creditsText =
+            EditCreditosEntry.Text?.Trim() ?? string.Empty;
+
+        if (!await ValidateCourseFormAsync(
+            code,
+            name,
+            creditsText))
         {
-            await DisplayAlert("Error", "El código del curso es requerido.", "OK");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(nombre))
-        {
-            await DisplayAlert("Error", "El nombre del curso es requerido.", "OK");
-            return;
-        }
-
-        if (!int.TryParse(creditosText, out int creditos) || creditos <= 0)
-        {
-            await DisplayAlert("Error", "Los créditos deben ser un número mayor de 0.", "OK");
-            return;
-        }
+        int credits = int.Parse(creditsText);
 
         if (_isCreatingNewCourse)
         {
-            var newCourse = new Course
-            {
-                Codigo = codigo,
-                Nombre = nombre,
-                Creditos = creditos,
-                IsCompleted = false
-            };
-
-            await _dbService.SaveCourseAsync(newCourse);
+            await CreateManualCourseAsync(
+                code,
+                name,
+                credits
+            );
         }
         else if (_courseBeingEdited != null)
         {
-            _courseBeingEdited.Codigo = codigo;
-            _courseBeingEdited.Nombre = nombre;
-            _courseBeingEdited.Creditos = creditos;
-
-            await _dbService.SaveCourseAsync(_courseBeingEdited);
+            await UpdateCourseAsync(
+                code,
+                name,
+                credits
+            );
         }
 
-        _courseBeingEdited = null;
-        _isCreatingNewCourse = false;
+        CloseCourseOverlay();
 
-        EditCourseTitleLabel.Text = "Editar curso";
-        DeleteCourseButton.IsVisible = true;
+        await LoadDataAsync();
 
-        EditCodigoEntry.Text = string.Empty;
-        EditNombreEntry.Text = string.Empty;
-        EditCreditosEntry.Text = string.Empty;
-
-        EditCourseOverlay.IsVisible = false;
-
-        await CargarDatos();
-
-        await ShowToastAsync("Curso guardado correctamente.");
+        await ShowToastAsync(
+            "Curso guardado correctamente."
+        );
     }
 
-    private async void OnDeleteCourseFromEditClicked(object sender, EventArgs e)
+    // Validate manual/edit course form
+    private async Task<bool> ValidateCourseFormAsync(
+        string code,
+        string name,
+        string creditsText)
     {
-        if (_isCreatingNewCourse)
-            return;
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            await DisplayAlert(
+                "Error",
+                "El código del curso es requerido.",
+                "OK"
+            );
 
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            await DisplayAlert(
+                "Error",
+                "El nombre del curso es requerido.",
+                "OK"
+            );
+
+            return false;
+        }
+
+        if (!int.TryParse(creditsText, out int credits) ||
+            credits <= 0)
+        {
+            await DisplayAlert(
+                "Error",
+                "Los créditos deben ser un número mayor de 0.",
+                "OK"
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Create manual course
+    private async Task CreateManualCourseAsync(
+        string code,
+        string name,
+        int credits)
+    {
+        var course = new Course
+        {
+            Codigo = code,
+            Nombre = name,
+            Creditos = credits,
+            IsCompleted = false
+        };
+
+        await _dbService.SaveCourseAsync(course);
+    }
+
+    // Update existing course
+    private async Task UpdateCourseAsync(
+        string code,
+        string name,
+        int credits)
+    {
         if (_courseBeingEdited == null)
             return;
+
+        _courseBeingEdited.Codigo = code;
+        _courseBeingEdited.Nombre = name;
+        _courseBeingEdited.Creditos = credits;
+
+        await _dbService.SaveCourseAsync(_courseBeingEdited);
+    }
+
+    // Delete selected course
+    private async void OnDeleteCourseFromEditClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (_isCreatingNewCourse ||
+            _courseBeingEdited == null)
+        {
+            return;
+        }
 
         bool confirm = await DisplayAlert(
             "Borrar curso",
@@ -423,15 +632,33 @@ public partial class Secuencial : ContentPage
         if (!confirm)
             return;
 
-        // Si tenía nota en promedio, también se elimina
-        await _dbService.DeleteGradeForCourseAsync(_courseBeingEdited);
+        // Remove grade if course had one
+        await _dbService.DeleteGradeForCourseAsync(
+            _courseBeingEdited
+        );
 
-        await _dbService.DeleteCourseAsync(_courseBeingEdited);
+        await _dbService.DeleteCourseAsync(
+            _courseBeingEdited
+        );
 
+        CloseCourseOverlay();
+
+        await LoadDataAsync();
+
+        await ShowToastAsync(
+            "Curso eliminado correctamente."
+        );
+    }
+
+    // Reset and hide overlay
+    private void CloseCourseOverlay()
+    {
         _courseBeingEdited = null;
+
         _isCreatingNewCourse = false;
 
         EditCourseTitleLabel.Text = "Editar curso";
+
         DeleteCourseButton.IsVisible = true;
 
         EditCodigoEntry.Text = string.Empty;
@@ -439,32 +666,34 @@ public partial class Secuencial : ContentPage
         EditCreditosEntry.Text = string.Empty;
 
         EditCourseOverlay.IsVisible = false;
-
-        await CargarDatos();
-
-        await ShowToastAsync("Curso eliminado correctamente.");
     }
 
-    private async Task ShowToastAsync(string message)
-    {
-        ToastLabel.Text = message;
-        ToastFrame.Opacity = 0;
-        ToastFrame.IsVisible = true;
-
-        await ToastFrame.FadeTo(1, 200);
-        await Task.Delay(1800);
-        await ToastFrame.FadeTo(0, 300);
-
-        ToastFrame.IsVisible = false;
-    }
-
-    private void OnCourseCheckedChanged(object sender, CheckedChangedEventArgs e)
+    // Show save progress button when checkbox changes
+    private void OnCourseCheckedChanged(
+        object sender,
+        CheckedChangedEventArgs e)
     {
         if (_isLoadingData)
             return;
 
-        // Cuando el usuario marca o desmarca un curso, aparece el botón de guardar progreso
         SaveProgressButton.IsVisible = true;
     }
 
+    // Simple toast animation
+    private async Task ShowToastAsync(string message)
+    {
+        ToastLabel.Text = message;
+
+        ToastFrame.Opacity = 0;
+
+        ToastFrame.IsVisible = true;
+
+        await ToastFrame.FadeTo(1, 200);
+
+        await Task.Delay(1800);
+
+        await ToastFrame.FadeTo(0, 300);
+
+        ToastFrame.IsVisible = false;
+    }
 }

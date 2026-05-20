@@ -2,6 +2,7 @@
 {
     public partial class AppShell : Shell
     {
+        // Main database service
         private readonly DataBaseServices _dbService;
 
         public AppShell(DataBaseServices dbService)
@@ -10,7 +11,13 @@
 
             _dbService = dbService;
 
-            // Routes
+            RegisterRoutes();
+
+            Loaded += async (s, e) => await CheckInitialNavigationAsync();
+        }
+
+        private void RegisterRoutes()
+        {
             Routing.RegisterRoute(nameof(ProfileCreation), typeof(ProfileCreation));
             Routing.RegisterRoute(nameof(Dashboard), typeof(Dashboard));
             Routing.RegisterRoute(nameof(Matricula), typeof(Matricula));
@@ -18,8 +25,6 @@
             Routing.RegisterRoute(nameof(Secuencial), typeof(Secuencial));
             Routing.RegisterRoute(nameof(ProfileManagement), typeof(ProfileManagement));
             Routing.RegisterRoute(nameof(SettingsPage), typeof(SettingsPage));
-
-            Loaded += async (s, e) => await CheckInitialNavigationAsync();
         }
 
         private async Task CheckInitialNavigationAsync()
@@ -32,19 +37,24 @@
                 return;
             }
 
-            var savedStudentId = await ActiveProfileService.GetSavedActiveStudentIdAsync();
-
-            if (!string.IsNullOrWhiteSpace(savedStudentId))
-            {
-                var student = await _dbService.GetStudentByStudentIdAsync(savedStudentId);
-
-                if (student != null)
-                {
-                    await ActiveProfileService.SetActiveStudentAsync(student);
-                }
-            }
+            await RestoreActiveProfileAsync();
 
             await Shell.Current.GoToAsync("//Dashboard");
+        }
+
+        private async Task RestoreActiveProfileAsync()
+        {
+            string? savedStudentId = await ActiveProfileService.GetSavedActiveStudentIdAsync();
+
+            if (string.IsNullOrWhiteSpace(savedStudentId))
+                return;
+
+            Student? student = await _dbService.GetStudentByStudentIdAsync(savedStudentId);
+
+            if (student != null)
+            {
+                await ActiveProfileService.SetActiveStudentAsync(student);
+            }
         }
     }
 }

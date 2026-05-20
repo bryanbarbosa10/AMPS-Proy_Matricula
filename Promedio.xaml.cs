@@ -4,6 +4,7 @@ namespace AMPS;
 
 public partial class Promedio : ContentPage
 {
+    // Main database service
     private readonly DataBaseServices _dbService;
 
     public ObservableCollection<Grade> MisNotas { get; set; } = new();
@@ -13,7 +14,9 @@ public partial class Promedio : ContentPage
     public Promedio(DataBaseServices dbService)
     {
         InitializeComponent();
+
         _dbService = dbService;
+
         BindingContext = this;
     }
 
@@ -30,56 +33,77 @@ public partial class Promedio : ContentPage
             );
 
             await Shell.Current.GoToAsync("//ProfileManagement");
+
             return;
         }
 
-        await CargarPromedioAsync();
+        await LoadGpaAsync();
     }
 
-    private async Task CargarPromedioAsync()
+    private async Task LoadGpaAsync()
     {
         MisNotas.Clear();
         HistorialGpa.Clear();
 
-        var notas = await _dbService.GetGradesForActiveStudentAsync();
+        await LoadGradesAsync();
+        await LoadGpaHistoryAsync();
 
-        foreach (var nota in notas)
+        CalculateGpa();
+    }
+
+    private async Task LoadGradesAsync()
+    {
+        List<Grade> grades = await _dbService.GetGradesForActiveStudentAsync();
+
+        foreach (Grade grade in grades)
         {
-            MisNotas.Add(nota);
+            MisNotas.Add(grade);
         }
+    }
 
-        var historial = await _dbService.GetGpaHistoryForActiveStudentAsync();
+    private async Task LoadGpaHistoryAsync()
+    {
+        List<GpaHistory> history =
+            await _dbService.GetGpaHistoryForActiveStudentAsync();
 
-        foreach (var item in historial)
+        foreach (GpaHistory item in history)
         {
             HistorialGpa.Add(item);
         }
-
-        CalcularGPA();
     }
 
-    private void CalcularGPA()
+    // Calculate GPA from saved grades
+    private void CalculateGpa()
     {
         if (MisNotas.Count == 0)
         {
             LblGpaTotal.Text = "0.00";
             LblCreditsTotal.Text = "Créditos completados: 0";
+
             return;
         }
 
-        double honorPoints = MisNotas.Sum(n => n.PuntosDeHonor * n.Creditos);
-        int totalCredits = MisNotas.Sum(n => n.Creditos);
+        double honorPoints = MisNotas.Sum(
+            grade => grade.PuntosDeHonor * grade.Creditos
+        );
+
+        int totalCredits = MisNotas.Sum(
+            grade => grade.Creditos
+        );
 
         if (totalCredits == 0)
         {
             LblGpaTotal.Text = "0.00";
             LblCreditsTotal.Text = "Créditos completados: 0";
+
             return;
         }
 
         double gpa = honorPoints / totalCredits;
 
         LblGpaTotal.Text = gpa.ToString("F2");
-        LblCreditsTotal.Text = $"Créditos completados: {totalCredits}";
+
+        LblCreditsTotal.Text =
+            $"Créditos completados: {totalCredits}";
     }
 }

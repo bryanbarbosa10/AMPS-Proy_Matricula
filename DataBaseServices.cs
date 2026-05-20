@@ -1,22 +1,21 @@
-﻿
-
-
-using SQLite;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using SQLite;
 
 namespace AMPS
 {
     public class DataBaseServices
     {
-        // Main connection to db
+        // Main SQLite connection
         private readonly SQLiteAsyncConnection _database;
 
         public DataBaseServices(string dbPath)
         {
             _database = new SQLiteAsyncConnection(dbPath);
 
-            // Create tables if not already
+            InitializeDatabase();
+        }
+
+        private void InitializeDatabase()
+        {
             _database.CreateTableAsync<Student>().Wait();
             _database.CreateTableAsync<Course>().Wait();
             _database.CreateTableAsync<Grade>().Wait();
@@ -25,83 +24,57 @@ namespace AMPS
             _database.CreateTableAsync<GpaHistory>().Wait();
         }
 
+        // STUDENTS--------------------------------------------------------------------
 
-
-        // STUDENTS-----------------------------------------
-
-        // Check for profiles
         public async Task<bool> HasStudentsAsync()
         {
-            var count = await _database.Table<Student>().CountAsync();
+            int count = await _database.Table<Student>().CountAsync();
+
             return count > 0;
         }
 
-        // New Student profiles
         public Task<int> SaveStudentAsync(Student student)
         {
             return _database.InsertAsync(student);
         }
 
-        // All profiles available
         public Task<List<Student>> GetStudentsAsync()
         {
             return _database.Table<Student>().ToListAsync();
         }
 
-        // Get student by database Id
-        public async Task<Student?> GetStudentByIdAsync(int id)
-        {
-            return await _database.Table<Student>()
-                .Where(s => s.Id == id)
-                .FirstOrDefaultAsync();
-        }
-
-        // Validate unique student id
         public async Task<Student?> GetStudentByStudentIdAsync(string studentId)
         {
             return await _database.Table<Student>()
-                .Where(s => s.StudentId == studentId)
+                .Where(student => student.StudentId == studentId)
                 .FirstOrDefaultAsync();
         }
 
-        // Update an existing student profile
         public Task<int> UpdateStudentAsync(Student student)
         {
             return _database.UpdateAsync(student);
         }
 
+        // COURSES--------------------------------------------------------------------
 
-
-        // COURSES-----------------------------------------
-
-        // Shows all courses saved
-        public Task<List<Course>> GetCoursesAsync()
-        {
-            return _database.Table<Course>().ToListAsync();
-        }
-
-        // Shows courses only for active profile
         public async Task<List<Course>> GetCoursesForActiveStudentAsync()
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return new List<Course>();
 
-            int studentDbId = activeStudent.Id;
-
             return await _database.Table<Course>()
-                .Where(c => c.StudentDbId == studentDbId)
+                .Where(course => course.StudentDbId == activeStudent.Id)
                 .ToListAsync();
         }
 
-        // Add or edit course for active profile
         public async Task<int> SaveCourseAsync(Course course)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
-                throw new Exception("No hay perfil activo.");
+                throw new Exception("No active profile found.");
 
             course.StudentDbId = activeStudent.Id;
 
@@ -111,43 +84,31 @@ namespace AMPS
             return await _database.InsertAsync(course);
         }
 
-        public async Task<int> DeleteCourseAsync(Course course)
+        public Task<int> DeleteCourseAsync(Course course)
         {
-            return await _database.DeleteAsync(course);
+            return _database.DeleteAsync(course);
         }
 
+        // GRADES--------------------------------------------------------------------
 
-
-        // GRADES------------------------------------------
-
-        // Show all grades
-        public Task<List<Grade>> GetGradesAsync()
-        {
-            return _database.Table<Grade>().ToListAsync();
-        }
-
-        // Shows grades only for active profile
         public async Task<List<Grade>> GetGradesForActiveStudentAsync()
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return new List<Grade>();
 
-            int studentDbId = activeStudent.Id;
-
             return await _database.Table<Grade>()
-                .Where(g => g.StudentDbId == studentDbId)
+                .Where(grade => grade.StudentDbId == activeStudent.Id)
                 .ToListAsync();
         }
 
-        // Save grade for active profile
         public async Task<int> SaveGradeAsync(Grade grade)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
-                throw new Exception("No hay perfil activo.");
+                throw new Exception("No active profile found.");
 
             grade.StudentDbId = activeStudent.Id;
 
@@ -157,52 +118,23 @@ namespace AMPS
             return await _database.InsertAsync(grade);
         }
 
-        // Delete grades only for active profile
-        public async Task<int> ClearGradesForActiveStudentAsync()
-        {
-            var activeStudent = ActiveProfileService.CurrentStudent;
-
-            if (activeStudent == null)
-                return 0;
-
-            int studentDbId = activeStudent.Id;
-
-            var grades = await _database.Table<Grade>()
-                .Where(g => g.StudentDbId == studentDbId)
-                .ToListAsync();
-
-            int deletedCount = 0;
-
-            foreach (var grade in grades)
-            {
-                deletedCount += await _database.DeleteAsync(grade);
-            }
-
-            return deletedCount;
-        }
-
-        // Delete all grades from database
-        public Task<int> ClearGradesAsync()
-        {
-            return _database.DeleteAllAsync<Grade>();
-        }
-
         public async Task<int> DeleteGradeForCourseAsync(Course course)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return 0;
 
-            var existingGrades = await _database.Table<Grade>()
-                .Where(g => g.StudentDbId == activeStudent.Id &&
-                            g.Materia == course.Nombre &&
-                            g.Creditos == course.Creditos)
+            List<Grade> existingGrades = await _database.Table<Grade>()
+                .Where(grade =>
+                    grade.StudentDbId == activeStudent.Id &&
+                    grade.Materia == course.Nombre &&
+                    grade.Creditos == course.Creditos)
                 .ToListAsync();
 
             int deletedCount = 0;
 
-            foreach (var grade in existingGrades)
+            foreach (Grade grade in existingGrades)
             {
                 deletedCount += await _database.DeleteAsync(grade);
             }
@@ -212,13 +144,18 @@ namespace AMPS
 
         public async Task<double> CalculateCurrentGpaForActiveStudentAsync()
         {
-            var grades = await GetGradesForActiveStudentAsync();
+            List<Grade> grades = await GetGradesForActiveStudentAsync();
 
             if (grades.Count == 0)
                 return 0.0;
 
-            double honorPoints = grades.Sum(g => g.PuntosDeHonor * g.Creditos);
-            int totalCredits = grades.Sum(g => g.Creditos);
+            double honorPoints = grades.Sum(
+                grade => grade.PuntosDeHonor * grade.Creditos
+            );
+
+            int totalCredits = grades.Sum(
+                grade => grade.Creditos
+            );
 
             if (totalCredits == 0)
                 return 0.0;
@@ -226,12 +163,14 @@ namespace AMPS
             return honorPoints / totalCredits;
         }
 
+        // GPA HISTORY--------------------------------------------------------------------
+
         public async Task<int> SaveGpaHistoryAsync(GpaHistory history)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
-                throw new Exception("No hay perfil activo.");
+                throw new Exception("No active profile found.");
 
             history.StudentDbId = activeStudent.Id;
 
@@ -240,41 +179,39 @@ namespace AMPS
 
         public async Task<List<GpaHistory>> GetGpaHistoryForActiveStudentAsync()
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return new List<GpaHistory>();
 
-            var history = await _database.Table<GpaHistory>()
-                .Where(h => h.StudentDbId == activeStudent.Id)
-                .OrderByDescending(h => h.DateSaved)
+            List<GpaHistory> history = await _database.Table<GpaHistory>()
+                .Where(item => item.StudentDbId == activeStudent.Id)
+                .OrderByDescending(item => item.DateSaved)
                 .ToListAsync();
 
             return history.Take(2).ToList();
         }
 
-        // MATRICULAS------------------------------------------
+        // MATRICULAS--------------------------------------------------------------------
 
         public async Task<List<MatriculaItem>> GetMatriculasForActiveStudentAsync()
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return new List<MatriculaItem>();
 
-            int studentDbId = activeStudent.Id;
-
             return await _database.Table<MatriculaItem>()
-                .Where(m => m.StudentDbId == studentDbId)
+                .Where(matricula => matricula.StudentDbId == activeStudent.Id)
                 .ToListAsync();
         }
 
         public async Task<int> SaveMatriculaAsync(MatriculaItem matricula)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
-                throw new Exception("No hay perfil activo.");
+                throw new Exception("No active profile found.");
 
             matricula.StudentDbId = activeStudent.Id;
 
@@ -286,77 +223,134 @@ namespace AMPS
             return matricula.Id;
         }
 
-        public async Task<int> DeleteMatriculaAsync(MatriculaItem matricula)
+        public Task<int> SaveMatriculaFileAsync(MatriculaFile file)
         {
-            return await _database.DeleteAsync(matricula);
-        }
-        public async Task<int> SaveMatriculaFileAsync(MatriculaFile file)
-        {
-            return await _database.InsertAsync(file);
+            return _database.InsertAsync(file);
         }
 
         public async Task<List<MatriculaFile>> GetFilesForMatriculaAsync(int matriculaItemId)
         {
             return await _database.Table<MatriculaFile>()
-                .Where(f => f.MatriculaItemId == matriculaItemId)
+                .Where(file => file.MatriculaItemId == matriculaItemId)
                 .ToListAsync();
         }
 
-        public async Task<int> DeleteMatriculaFileAsync(MatriculaFile file)
-        {
-            return await _database.DeleteAsync(file);
-        }
         public async Task<int> DeleteMatriculaWithFilesAsync(MatriculaItem matricula)
         {
-            var files = await GetFilesForMatriculaAsync(matricula.Id);
+            List<MatriculaFile> files = await GetFilesForMatriculaAsync(matricula.Id);
 
-            foreach (var file in files)
+            int deletedCount = 0;
+
+            foreach (MatriculaFile file in files)
             {
-                if (!string.IsNullOrWhiteSpace(file.FilePath) && File.Exists(file.FilePath))
-                {
-                    File.Delete(file.FilePath);
-                }
+                DeleteStoredFileIfExists(file.FilePath);
 
-                await _database.DeleteAsync(file);
+                deletedCount += await _database.DeleteAsync(file);
             }
 
-            return await _database.DeleteAsync(matricula);
+            deletedCount += await _database.DeleteAsync(matricula);
+
+            return deletedCount;
         }
 
-        //Settings
+        // RESET OPTIONS--------------------------------------------------------------------
 
         public async Task<int> ResetSecuencialForActiveStudentAsync()
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
 
             if (activeStudent == null)
                 return 0;
 
-            int deletedCount = 0;
+            int affectedCount = 0;
 
-            var courses = await _database.Table<Course>()
-                .Where(c => c.StudentDbId == activeStudent.Id)
+            affectedCount += await DeleteCoursesForStudentAsync(activeStudent.Id);
+            affectedCount += await DeleteGradesForStudentAsync(activeStudent.Id);
+            affectedCount += await DeleteGpaHistoryForStudentAsync(activeStudent.Id);
+
+            return affectedCount;
+        }
+
+        public async Task<int> ResetPromedioForActiveStudentAsync()
+        {
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
+
+            if (activeStudent == null)
+                return 0;
+
+            int affectedCount = 0;
+
+            affectedCount += await DeleteGradesForStudentAsync(activeStudent.Id);
+            affectedCount += await DeleteGpaHistoryForStudentAsync(activeStudent.Id);
+            affectedCount += await UncheckCompletedCoursesForStudentAsync(activeStudent.Id);
+
+            return affectedCount;
+        }
+
+        public async Task<int> ResetMatriculaForActiveStudentAsync()
+        {
+            Student? activeStudent = ActiveProfileService.CurrentStudent;
+
+            if (activeStudent == null)
+                return 0;
+
+            List<MatriculaItem> matriculas = await _database.Table<MatriculaItem>()
+                .Where(matricula => matricula.StudentDbId == activeStudent.Id)
                 .ToListAsync();
 
-            foreach (var course in courses)
+            int deletedCount = 0;
+
+            foreach (MatriculaItem matricula in matriculas)
+            {
+                deletedCount += await DeleteMatriculaWithFilesAsync(matricula);
+            }
+
+            return deletedCount;
+        }
+
+        // HELPERS--------------------------------------------------------------------
+
+        private async Task<int> DeleteCoursesForStudentAsync(int studentDbId)
+        {
+            List<Course> courses = await _database.Table<Course>()
+                .Where(course => course.StudentDbId == studentDbId)
+                .ToListAsync();
+
+            int deletedCount = 0;
+
+            foreach (Course course in courses)
             {
                 deletedCount += await _database.DeleteAsync(course);
             }
 
-            var grades = await _database.Table<Grade>()
-                .Where(g => g.StudentDbId == activeStudent.Id)
+            return deletedCount;
+        }
+
+        private async Task<int> DeleteGradesForStudentAsync(int studentDbId)
+        {
+            List<Grade> grades = await _database.Table<Grade>()
+                .Where(grade => grade.StudentDbId == studentDbId)
                 .ToListAsync();
 
-            foreach (var grade in grades)
+            int deletedCount = 0;
+
+            foreach (Grade grade in grades)
             {
                 deletedCount += await _database.DeleteAsync(grade);
             }
 
-            var histories = await _database.Table<GpaHistory>()
-                .Where(h => h.StudentDbId == activeStudent.Id)
+            return deletedCount;
+        }
+
+        private async Task<int> DeleteGpaHistoryForStudentAsync(int studentDbId)
+        {
+            List<GpaHistory> historyItems = await _database.Table<GpaHistory>()
+                .Where(history => history.StudentDbId == studentDbId)
                 .ToListAsync();
 
-            foreach (var history in histories)
+            int deletedCount = 0;
+
+            foreach (GpaHistory history in historyItems)
             {
                 deletedCount += await _database.DeleteAsync(history);
             }
@@ -364,80 +358,36 @@ namespace AMPS
             return deletedCount;
         }
 
-        public async Task<int> ResetPromedioForActiveStudentAsync()
+        private async Task<int> UncheckCompletedCoursesForStudentAsync(int studentDbId)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
-
-            if (activeStudent == null)
-                return 0;
+            List<Course> courses = await _database.Table<Course>()
+                .Where(course => course.StudentDbId == studentDbId)
+                .ToListAsync();
 
             int affectedCount = 0;
 
-            var grades = await _database.Table<Grade>()
-                .Where(g => g.StudentDbId == activeStudent.Id)
-                .ToListAsync();
-
-            foreach (var grade in grades)
+            foreach (Course course in courses)
             {
-                affectedCount += await _database.DeleteAsync(grade);
-            }
+                if (!course.IsCompleted)
+                    continue;
 
-            var histories = await _database.Table<GpaHistory>()
-                .Where(h => h.StudentDbId == activeStudent.Id)
-                .ToListAsync();
+                course.IsCompleted = false;
 
-            foreach (var history in histories)
-            {
-                affectedCount += await _database.DeleteAsync(history);
-            }
-
-            var courses = await _database.Table<Course>()
-                .Where(c => c.StudentDbId == activeStudent.Id)
-                .ToListAsync();
-
-            foreach (var course in courses)
-            {
-                if (course.IsCompleted)
-                {
-                    course.IsCompleted = false;
-                    affectedCount += await _database.UpdateAsync(course);
-                }
+                affectedCount += await _database.UpdateAsync(course);
             }
 
             return affectedCount;
         }
 
-        public async Task<int> ResetMatriculaForActiveStudentAsync()
+        private void DeleteStoredFileIfExists(string filePath)
         {
-            var activeStudent = ActiveProfileService.CurrentStudent;
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
 
-            if (activeStudent == null)
-                return 0;
-
-            int deletedCount = 0;
-
-            var matriculas = await _database.Table<MatriculaItem>()
-                .Where(m => m.StudentDbId == activeStudent.Id)
-                .ToListAsync();
-
-            foreach (var matricula in matriculas)
+            if (File.Exists(filePath))
             {
-                var files = await GetFilesForMatriculaAsync(matricula.Id);
-
-                foreach (var file in files)
-                {
-                    if (!string.IsNullOrWhiteSpace(file.FilePath) && File.Exists(file.FilePath))
-                    {
-                        File.Delete(file.FilePath);
-                    }
-
-                    deletedCount += await _database.DeleteAsync(file);
-                }
-
-                deletedCount += await _database.DeleteAsync(matricula);
+                File.Delete(filePath);
             }
-
-            return deletedCount;
         }
     }
 }

@@ -14,6 +14,7 @@ namespace AMPS
         public ProfileCreation(DataBaseServices dbService)
         {
             InitializeComponent();
+
             _dbService = dbService;
         }
 
@@ -22,10 +23,7 @@ namespace AMPS
         {
             base.OnAppearing();
 
-            NameEntry.Text = string.Empty;
-            NicknameEntry.Text = string.Empty;
-            StudentIdEntry.Text = string.Empty;
-            EmailEntry.Text = string.Empty;
+            ClearFields();
         }
 
         // Save profile
@@ -33,63 +31,34 @@ namespace AMPS
         {
             // Clean text
             string name = NameEntry.Text?.Trim() ?? string.Empty;
+
             string nickname = NicknameEntry.Text?.Trim() ?? string.Empty;
+
             string studentId = StudentIdEntry.Text?.Trim() ?? string.Empty;
+
             string email = EmailEntry.Text?.Trim() ?? string.Empty;
 
-            // Name required
-            if (string.IsNullOrWhiteSpace(name))
+            if (!await ValidateProfileDataAsync(
+                name,
+                nickname,
+                studentId,
+                email))
             {
-                await DisplayAlert("Missing Data", "Name is required.", "OK");
                 return;
-            }
-
-            // Student ID required
-            if (string.IsNullOrWhiteSpace(studentId))
-            {
-                await DisplayAlert("Missing Data", "Student ID is required.", "OK");
-                return;
-            }
-
-            // Max lengths
-            if (name.Length > 30)
-            {
-                await DisplayAlert("Invalid Data", "Name cannot exceed 30 characters.", "OK");
-                return;
-            }
-
-            if (nickname.Length > 40)
-            {
-                await DisplayAlert("Invalid Data", "Nickname cannot exceed 20 characters.", "OK");
-                return;
-            }
-
-            if (studentId.Length > 25)
-            {
-                await DisplayAlert("Invalid Data", "Student ID cannot exceed 25 characters.", "OK");
-                return;
-            }
-
-            // Validate email only if typed
-            if (!string.IsNullOrWhiteSpace(email))
-            {
-                bool validEmail = Regex.IsMatch(
-                    email,
-                    @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                );
-
-                if (!validEmail)
-                {
-                    await DisplayAlert("Invalid Email", "Please enter a valid email.", "OK");
-                    return;
-                }
             }
 
             // Check duplicate student ID
-            var existingStudent = await _dbService.GetStudentByStudentIdAsync(studentId);
+            Student? existingStudent =
+                await _dbService.GetStudentByStudentIdAsync(studentId);
+
             if (existingStudent != null)
             {
-                await DisplayAlert("Duplicate Student ID", "That student ID is already registered.", "OK");
+                await DisplayAlert(
+                    "Duplicate Student ID",
+                    "That student ID is already registered.",
+                    "OK"
+                );
+
                 return;
             }
 
@@ -107,32 +76,141 @@ namespace AMPS
                 // Save profile
                 await _dbService.SaveStudentAsync(student);
 
-                // Important:
-                // Reload the student from SQLite so it has the generated Id
-                var savedStudent = await _dbService.GetStudentByStudentIdAsync(studentId);
+                // Reload student to get generated SQLite Id
+                Student? savedStudent =
+                    await _dbService.GetStudentByStudentIdAsync(studentId);
 
                 if (savedStudent != null)
                 {
-                    await ActiveProfileService.SetActiveStudentAsync(savedStudent);
+                    await ActiveProfileService
+                        .SetActiveStudentAsync(savedStudent);
                 }
 
-                await DisplayAlert("Success", "Profile saved successfully.", "OK");
+                await DisplayAlert(
+                    "Success",
+                    "Profile saved successfully.",
+                    "OK"
+                );
 
-                // If opened from profile management, go back there
-                if (From == "profiles")
-                {
-                    await Shell.Current.GoToAsync("//ProfileManagement");
-                }
-                else
-                {
-                    // First boot
-                    await Shell.Current.GoToAsync("//Dashboard");
-                }
+                await NavigateAfterSaveAsync();
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", $"Could not save profile: {ex.Message}", "OK");
+                await DisplayAlert(
+                    "Error",
+                    $"Could not save profile: {ex.Message}",
+                    "OK"
+                );
             }
+        }
+
+        private async Task<bool> ValidateProfileDataAsync(
+            string name,
+            string nickname,
+            string studentId,
+            string email)
+        {
+            // Name required
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                await DisplayAlert(
+                    "Missing Data",
+                    "Name is required.",
+                    "OK"
+                );
+
+                return false;
+            }
+
+            // Student ID required
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                await DisplayAlert(
+                    "Missing Data",
+                    "Student ID is required.",
+                    "OK"
+                );
+
+                return false;
+            }
+
+            // Max lengths
+            if (name.Length > 30)
+            {
+                await DisplayAlert(
+                    "Invalid Data",
+                    "Name cannot exceed 30 characters.",
+                    "OK"
+                );
+
+                return false;
+            }
+
+            if (nickname.Length > 40)
+            {
+                await DisplayAlert(
+                    "Invalid Data",
+                    "Nickname cannot exceed 40 characters.",
+                    "OK"
+                );
+
+                return false;
+            }
+
+            if (studentId.Length > 25)
+            {
+                await DisplayAlert(
+                    "Invalid Data",
+                    "Student ID cannot exceed 25 characters.",
+                    "OK"
+                );
+
+                return false;
+            }
+
+            // Validate email only if typed
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                bool validEmail = Regex.IsMatch(
+                    email,
+                    @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+                );
+
+                if (!validEmail)
+                {
+                    await DisplayAlert(
+                        "Invalid Email",
+                        "Please enter a valid email.",
+                        "OK"
+                    );
+
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private async Task NavigateAfterSaveAsync()
+        {
+            // If opened from profile management, go back there
+            if (From == "profiles")
+            {
+                await Shell.Current.GoToAsync("//ProfileManagement");
+            }
+            else
+            {
+                // First boot
+                await Shell.Current.GoToAsync("//Dashboard");
+            }
+        }
+
+        private void ClearFields()
+        {
+            NameEntry.Text = string.Empty;
+            NicknameEntry.Text = string.Empty;
+            StudentIdEntry.Text = string.Empty;
+            EmailEntry.Text = string.Empty;
         }
     }
 }
